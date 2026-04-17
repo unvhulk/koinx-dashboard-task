@@ -1,11 +1,15 @@
+import re
 import json
-from groq import Groq
+from groq import AsyncGroq
 from config import settings
 from models import Insight, Source, ContentType, Sentiment, Platform
 
-_client = Groq(api_key=settings.groq_api_key)
+_client = AsyncGroq(api_key=settings.groq_api_key)
 
 BATCH_SIZE = 50
+MIN_WORDS = 6
+MIN_CHARS = 30
+MERGE_SIMILARITY_THRESHOLD = 0.45
 
 SYSTEM_PROMPT = """You are a content strategist for KoinX, a crypto tax and accounting platform.
 Your job: analyze user comments and identify content opportunities for the KoinX content team.
@@ -30,12 +34,24 @@ Return JSON with this exact structure:
 
 Rules:
 - Return 3-8 topics maximum
+- Merge similar or overlapping topics — do not return near-duplicates
 - content_type "video" = tutorials/walkthroughs, "blog" = explainers/FAQs, "social" = quick tips/polls
-- example_quotes must be verbatim excerpts from the comments below
+- example_quotes must be verbatim excerpts from the comments below (not paraphrased)
 - frequency must be a positive integer
+- Ignore greetings, single-word reactions, and off-topic comments
 
 Comments:
 {comments}"""
+
+
+def _is_quality_comment(text: str) -> bool:
+    cleaned = re.sub(r'[^\w\s]', '', text, flags=re.UNICODE)
+    words = [w for w in cleaned.split() if len(w) > 1]
+    return len(words) >= MIN_WORDS and len(text) >= MIN_CHARS
+
+
+def _filter_comments(comments: list[str]) -> list[str]:
+    return [c for c in comments if _is_quality_comment(c)]
 
 
 def _parse_response(raw: str) -> list[dict]:
@@ -47,10 +63,10 @@ def _parse_response(raw: str) -> list[dict]:
     return json.loads(raw).get("topics", [])
 
 
-def _call_llm(tag: str, comments: list[str], platform: str) -> list[dict]:
+async def _call_llm(tag: str, comments: list[str], platform: str) -> list[dict]:
     joined = "\n".join(f"- {c}" for c in comments)
     prompt = USER_PROMPT_TEMPLATE.format(tag=tag, platform=platform, comments=joined)
-    resp = _client.chat.completions.create(
+    resp = await _client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -62,35 +78,47 @@ def _call_llm(tag: str, comments: list[str], platform: str) -> list[dict]:
     return _parse_response(resp.choices[0].message.content)
 
 
+def _word_overlap(a: str, b: str) -> float:
+    wa = set(a.lower().split())
+    wb = set(b.lower().split())
+    if not wa or not wb:
+        return 0.0
+    return len(wa & wb) / min(len(wa), len(wb))
+
+
 def _merge_topics(all_topics: list[dict]) -> list[dict]:
-    """Merge duplicate topics across batches, summing frequency."""
-    merged: dict[str, dict] = {}
-    for t in all_topics:
-        key = t["topic"].lower()
-        if key in merged:
-            merged[key]["frequency"] += t.get("frequency", 1)
-            merged[key]["example_quotes"].extend(t.get("example_quotes", []))
-        else:
-            merged[key] = dict(t)
-    # Keep top 10 by frequency, cap quotes at 3
-    result = sorted(merged.values(), key=lambda x: x["frequency"], reverse=True)[:10]
+    merged: list[dict] = []
+
+    for topic in all_topics:
+        matched = False
+        for existing in merged:
+            if _word_overlap(topic["topic"], existing["topic"]) >= MERGE_SIMILARITY_THRESHOLD:
+                existing["frequency"] += topic.get("frequency", 1)
+                existing["example_quotes"].extend(topic.get("example_quotes", []))
+                matched = True
+                break
+        if not matched:
+            merged.append(dict(topic))
+
+    result = sorted(merged, key=lambda x: x["frequency"], reverse=True)[:10]
     for t in result:
-        t["example_quotes"] = t["example_quotes"][:3]
+        t["example_quotes"] = list(dict.fromkeys(t["example_quotes"]))[:3]
     return result
 
 
-def extract_insights(
+async def extract_insights(
     tag: str,
     comments: list[str],
     platform: Platform,
     sources: list[Source] | None = None,
 ) -> list[Insight]:
-    batches = [comments[i:i + BATCH_SIZE] for i in range(0, len(comments), BATCH_SIZE)]
+    quality_comments = _filter_comments(comments)
+    batches = [quality_comments[i:i + BATCH_SIZE] for i in range(0, len(quality_comments), BATCH_SIZE)]
     all_topics: list[dict] = []
 
     for batch in batches:
         try:
-            topics = _call_llm(tag, batch, platform.value)
+            topics = await _call_llm(tag, batch, platform.value)
             all_topics.extend(topics)
         except Exception:
             continue

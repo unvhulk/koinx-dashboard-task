@@ -71,7 +71,7 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
                     Source(url=f"https://youtube.com/watch?v={v['video_id']}", title=v["title"])
                     for v in videos
                 ]
-                insights = llm.extract_insights(req.search_tag, yt_comments, Platform.youtube, yt_sources)
+                insights = await llm.extract_insights(req.search_tag, yt_comments, Platform.youtube, yt_sources)
                 all_insights.extend(i.model_dump() for i in insights)
 
         if Platform.reddit in req.platforms:
@@ -84,7 +84,7 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
             total_comments += len(rd_comments)
 
             if rd_comments:
-                insights = llm.extract_insights(req.search_tag, rd_comments, Platform.reddit)
+                insights = await llm.extract_insights(req.search_tag, rd_comments, Platform.reddit)
                 all_insights.extend(i.model_dump() for i in insights)
 
         # Serialize dates in insights
@@ -99,6 +99,7 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
                 "status": RunStatus.complete,
                 "video_count": total_videos,
                 "comment_count": total_comments,
+                "insight_count": len(all_insights),
                 "insights": all_insights,
             }}
         )
@@ -123,6 +124,7 @@ async def analyze(req: AnalyzeRequest, background_tasks: BackgroundTasks):
         "created_at": datetime.utcnow(),
         "video_count": 0,
         "comment_count": 0,
+        "insight_count": 0,
         "insights": [],
         "error": None,
     }

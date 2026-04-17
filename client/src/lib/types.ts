@@ -35,6 +35,7 @@ export interface AnalysisRun {
   status: RunStatus;
   video_count: number;
   comment_count: number;
+  insight_count?: number;
   created_at: string;
   insights?: Insight[];
 }
