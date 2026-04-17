@@ -12,6 +12,11 @@ const defaultDates = {
   end_date: "2024-03-31",
 };
 
+const PLATFORM_LABELS: Record<Platform, string> = {
+  youtube: "YouTube",
+  reddit: "Reddit",
+};
+
 export function SearchForm() {
   const router = useRouter();
   const [form, setForm] = useState<AnalyzeRequest>({
@@ -23,17 +28,15 @@ export function SearchForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const youtubeSelected = form.platforms.includes("youtube");
+
   function togglePlatform(platform: Platform) {
     setForm((current) => {
       const exists = current.platforms.includes(platform);
       const nextPlatforms = exists
         ? current.platforms.filter((value) => value !== platform)
         : [...current.platforms, platform];
-
-      return {
-        ...current,
-        platforms: nextPlatforms,
-      };
+      return { ...current, platforms: nextPlatforms };
     });
   }
 
@@ -41,7 +44,7 @@ export function SearchForm() {
     event.preventDefault();
 
     if (!form.search_tag.trim()) {
-      setError("Search tag is required.");
+      setError("Please enter a topic to search for.");
       return;
     }
 
@@ -51,7 +54,7 @@ export function SearchForm() {
     }
 
     if (!form.platforms.length) {
-      setError("Select at least one platform.");
+      setError("Please select at least one platform.");
       return;
     }
 
@@ -67,7 +70,7 @@ export function SearchForm() {
       const message =
         submitError instanceof Error
           ? submitError.message
-          : "Unable to start analysis.";
+          : "Something went wrong. Please try again.";
       setError(message);
     } finally {
       setSubmitting(false);
@@ -82,93 +85,93 @@ export function SearchForm() {
       <div className="absolute -right-24 top-0 h-52 w-52 rounded-full bg-cyan-300/12 blur-3xl" />
       <div className="absolute -left-16 bottom-0 h-36 w-36 rounded-full bg-emerald-300/10 blur-3xl" />
 
-      <div className="relative space-y-8">
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-          <label className="space-y-3">
-            <span className="text-xs uppercase tracking-[0.26em] text-cyan-100/50">
-              Search Tag
-            </span>
-            <input
-              value={form.search_tag}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  search_tag: event.target.value,
-                }))
-              }
-              placeholder="crypto tax india"
-              className="w-full rounded-[24px] border border-white/10 bg-slate-950/45 px-5 py-4 text-base text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300/35 focus:bg-slate-950/65"
-            />
-          </label>
+      <div className="relative space-y-6">
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <label className="space-y-3">
-              <span className="text-xs uppercase tracking-[0.26em] text-cyan-100/50">
-                Start Date
-              </span>
+        {/* Topic */}
+        <label className="block space-y-2">
+          <span className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
+            Topic or keyword
+          </span>
+          <input
+            value={form.search_tag}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, search_tag: event.target.value }))
+            }
+            placeholder="e.g. crypto tax india, bitcoin capital gains"
+            className="w-full rounded-[24px] border border-white/10 bg-slate-950/45 px-5 py-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/35 focus:bg-slate-950/65"
+          />
+          <p className="px-1 text-xs text-slate-400/60">
+            Enter the topic your audience is talking about
+          </p>
+        </label>
+
+        {/* Date range */}
+        <div className="space-y-2">
+          <span className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
+            Date range
+          </span>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1.5">
+              <span className="px-1 text-xs text-slate-400/60">From</span>
               <input
                 type="date"
                 value={form.start_date}
                 onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    start_date: event.target.value,
-                  }))
+                  setForm((current) => ({ ...current, start_date: event.target.value }))
                 }
-                className="w-full rounded-[24px] border border-white/10 bg-slate-950/45 px-5 py-4 text-base text-white outline-none transition focus:border-cyan-300/35 focus:bg-slate-950/65"
+                className="w-full rounded-[20px] border border-white/10 bg-slate-950/45 px-4 py-3.5 text-sm text-white outline-none transition [color-scheme:dark] focus:border-cyan-300/35 focus:bg-slate-950/65"
               />
             </label>
-            <label className="space-y-3">
-              <span className="text-xs uppercase tracking-[0.26em] text-cyan-100/50">
-                End Date
-              </span>
+            <label className="block space-y-1.5">
+              <span className="px-1 text-xs text-slate-400/60">To</span>
               <input
                 type="date"
                 value={form.end_date}
                 onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    end_date: event.target.value,
-                  }))
+                  setForm((current) => ({ ...current, end_date: event.target.value }))
                 }
-                className="w-full rounded-[24px] border border-white/10 bg-slate-950/45 px-5 py-4 text-base text-white outline-none transition focus:border-cyan-300/35 focus:bg-slate-950/65"
+                className="w-full rounded-[20px] border border-white/10 bg-slate-950/45 px-4 py-3.5 text-sm text-white outline-none transition [color-scheme:dark] focus:border-cyan-300/35 focus:bg-slate-950/65"
               />
             </label>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.26em] text-cyan-100/50">
-              Platforms
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {(["youtube", "reddit"] as Platform[]).map((platform) => {
-                const checked = form.platforms.includes(platform);
-
-                return (
-                  <button
-                    key={platform}
-                    type="button"
-                    onClick={() => togglePlatform(platform)}
-                    className={cn(
-                      "rounded-full border px-4 py-3 text-sm font-medium capitalize transition",
-                      checked
-                        ? "border-cyan-300/30 bg-cyan-300/12 text-white"
-                        : "border-white/10 bg-white/6 text-slate-300 hover:border-white/20 hover:text-white",
-                    )}
-                  >
-                    {platform}
-                  </button>
-                );
-              })}
-            </div>
+        {/* Platforms */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
+            Where to look
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {(["youtube", "reddit"] as Platform[]).map((platform) => {
+              const checked = form.platforms.includes(platform);
+              return (
+                <button
+                  key={platform}
+                  type="button"
+                  onClick={() => togglePlatform(platform)}
+                  className={cn(
+                    "rounded-full border px-5 py-2.5 text-sm font-medium transition",
+                    checked
+                      ? "border-cyan-300/30 bg-cyan-300/12 text-white"
+                      : "border-white/10 bg-white/6 text-slate-300 hover:border-white/20 hover:text-white",
+                  )}
+                >
+                  {PLATFORM_LABELS[platform]}
+                </button>
+              );
+            })}
           </div>
+          <p className="px-1 text-xs text-slate-400/60">
+            Select where to collect comments from
+          </p>
+        </div>
 
-          <div className="space-y-3">
+        {/* Max videos — only when YouTube selected */}
+        {youtubeSelected && (
+          <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.26em] text-cyan-100/50">
-                Max Videos
+              <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
+                How many videos to scan
               </p>
               <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-sm text-white">
                 {form.max_videos}
@@ -180,15 +183,15 @@ export function SearchForm() {
               max={50}
               value={form.max_videos}
               onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  max_videos: Number(event.target.value),
-                }))
+                setForm((current) => ({ ...current, max_videos: Number(event.target.value) }))
               }
               className="koinx-range w-full"
             />
+            <p className="px-1 text-xs text-slate-400/60">
+              More videos = more comments = better results, but takes longer
+            </p>
           </div>
-        </div>
+        )}
 
         {error ? (
           <p className="rounded-2xl border border-rose-300/14 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">
@@ -197,18 +200,15 @@ export function SearchForm() {
         ) : null}
 
         <div className="flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-xl text-sm leading-7 text-slate-300">
-            Discover recurring audience pain points, map them to high-conviction
-            content types, and turn raw comments into integratable editorial
-            signals for the next campaign.
-          </div>
-
+          <p className="max-w-xs text-sm leading-6 text-slate-400/70">
+            Takes 30–60 seconds. We'll scan comments and group them into content ideas for you.
+          </p>
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex min-w-[188px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#7ef4ff,#5be4c6)] px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#7ef4ff,#5be4c6)] px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {submitting ? "Analyzing..." : "Analyze"}
+            {submitting ? "Finding ideas..." : "Find content ideas"}
           </button>
         </div>
       </div>
