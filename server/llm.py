@@ -16,29 +16,32 @@ Your job: analyze user comments and identify content opportunities for the KoinX
 Always respond with valid JSON only. No markdown, no explanation."""
 
 USER_PROMPT_TEMPLATE = """Analyze these {platform} comments about "{tag}".
-Identify pain points, questions, and content opportunities.
+Find the real questions and frustrations people have. These will become content ideas for a crypto tax platform.
 
 Return JSON with this exact structure:
 {{
   "topics": [
     {{
-      "topic": "short descriptive label (max 6 words)",
+      "topic": "the actual question or pain point people have (max 8 words, written as a question or problem — NOT a category name)",
       "content_type": "blog" or "video" or "social",
       "frequency": <integer: how many comments relate to this topic>,
       "sentiment": "confused" or "concerned" or "curious" or "positive",
-      "suggested_title": "specific, actionable content title",
-      "example_quotes": ["quote1", "quote2"]
+      "suggested_title": "a specific, ready-to-use title for a blog post or video on this topic",
+      "example_quotes": ["verbatim quote from comments", "another verbatim quote"]
     }}
   ]
 }}
 
 Rules:
 - Return 3-8 topics maximum
-- Merge similar or overlapping topics — do not return near-duplicates
-- content_type "video" = tutorials/walkthroughs, "blog" = explainers/FAQs, "social" = quick tips/polls
-- example_quotes must be verbatim excerpts from the comments below (not paraphrased)
+- topic must sound like a real person's question or problem, NOT a category label
+  BAD: "Tax Lot Selection", "Exit Strategy", "Crypto Tax Software"
+  GOOD: "Which tax lot method saves the most money?", "Do I owe tax if I haven't sold yet?", "How do I report a crypto loss?"
+- Merge similar or overlapping topics — no near-duplicates
+- content_type: "video" = step-by-step walkthroughs, "blog" = detailed explainers/FAQs, "social" = short tips or myth-busting
+- example_quotes must be verbatim from the comments below — do not paraphrase
 - frequency must be a positive integer
-- Ignore greetings, single-word reactions, and off-topic comments
+- Skip greetings, single reactions, off-topic comments
 
 Comments:
 {comments}"""

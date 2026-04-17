@@ -20,19 +20,24 @@ export function TopicCard({ insight }: { insight: Insight }) {
         </span>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className=”mt-6 space-y-4”>
         <div>
-          <h3 className="font-[family-name:var(--font-display)] text-2xl leading-tight text-white">
+          <h3 className=”font-[family-name:var(--font-display)] text-xl leading-snug text-white”>
             {insight.topic}
           </h3>
-          <p className="mt-3 text-sm uppercase tracking-[0.2em] text-cyan-100/50">
-            {insight.frequency} comments
+          <p className=”mt-2 text-xs text-slate-400/60”>
+            Came up in {insight.frequency} comments
           </p>
         </div>
 
-        <p className="rounded-2xl border border-white/8 bg-black/12 px-4 py-4 text-sm italic leading-7 text-slate-200/82">
-          “{insight.suggested_title}”
-        </p>
+        <div className=”rounded-2xl border border-white/8 bg-black/12 px-4 py-3”>
+          <p className=”mb-1 text-xs uppercase tracking-[0.18em] text-cyan-100/40”>
+            Suggested title
+          </p>
+          <p className=”text-sm leading-6 text-slate-200/85”>
+            {insight.suggested_title}
+          </p>
+        </div>
       </div>
 
       <div className="mt-6 space-y-4">
