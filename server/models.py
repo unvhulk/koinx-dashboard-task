@@ -29,6 +29,11 @@ class RunStatus(str, Enum):
     failed = "failed"
 
 
+class Source(BaseModel):
+    url: str
+    title: str
+
+
 class Insight(BaseModel):
     topic: str
     content_type: ContentType
@@ -37,6 +42,7 @@ class Insight(BaseModel):
     suggested_title: str
     example_quotes: list[str]
     platform: Platform
+    sources: list[Source] = []
 
 
 class AnalysisRun(BaseModel):

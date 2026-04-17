@@ -11,6 +11,11 @@ export interface AnalyzeRequest {
   max_videos: number;
 }
 
+export interface Source {
+  url: string;
+  title: string;
+}
+
 export interface Insight {
   topic: string;
   content_type: ContentType;
@@ -19,6 +24,7 @@ export interface Insight {
   suggested_title: string;
   example_quotes: string[];
   platform: Platform;
+  sources: Source[];
 }
 
 export interface AnalysisRun {

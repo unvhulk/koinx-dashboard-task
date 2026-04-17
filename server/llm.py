@@ -1,7 +1,7 @@
 import json
 from groq import Groq
 from config import settings
-from models import Insight, ContentType, Sentiment, Platform
+from models import Insight, Source, ContentType, Sentiment, Platform
 
 _client = Groq(api_key=settings.groq_api_key)
 
@@ -79,7 +79,12 @@ def _merge_topics(all_topics: list[dict]) -> list[dict]:
     return result
 
 
-def extract_insights(tag: str, comments: list[str], platform: Platform) -> list[Insight]:
+def extract_insights(
+    tag: str,
+    comments: list[str],
+    platform: Platform,
+    sources: list[Source] | None = None,
+) -> list[Insight]:
     batches = [comments[i:i + BATCH_SIZE] for i in range(0, len(comments), BATCH_SIZE)]
     all_topics: list[dict] = []
 
@@ -103,6 +108,7 @@ def extract_insights(tag: str, comments: list[str], platform: Platform) -> list[
                 suggested_title=t.get("suggested_title", t["topic"]),
                 example_quotes=t.get("example_quotes", []),
                 platform=platform,
+                sources=sources or [],
             ))
         except Exception:
             continue

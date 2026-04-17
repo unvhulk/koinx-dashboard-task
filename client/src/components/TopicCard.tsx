@@ -35,7 +35,7 @@ export function TopicCard({ insight }: { insight: Insight }) {
         </p>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-4">
         <button
           type="button"
           onClick={() => setExpanded((current) => !current)}
@@ -48,7 +48,7 @@ export function TopicCard({ insight }: { insight: Insight }) {
         </button>
 
         {expanded ? (
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3">
             {insight.example_quotes.slice(0, 3).map((quote) => (
               <blockquote
                 key={quote}
@@ -57,6 +57,29 @@ export function TopicCard({ insight }: { insight: Insight }) {
                 {quote}
               </blockquote>
             ))}
+          </div>
+        ) : null}
+
+        {insight.sources?.length ? (
+          <div className="border-t border-white/8 pt-4">
+            <p className="mb-2 text-xs uppercase tracking-[0.22em] text-slate-400/60">
+              Sources
+            </p>
+            <ul className="space-y-1.5">
+              {insight.sources.slice(0, 5).map((source) => (
+                <li key={source.url}>
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs text-cyan-200/70 transition hover:text-cyan-100"
+                  >
+                    <span className="shrink-0 text-[10px]">↗</span>
+                    <span className="truncate">{source.title}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
       </div>

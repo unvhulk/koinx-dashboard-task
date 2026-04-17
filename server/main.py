@@ -11,7 +11,7 @@ import youtube
 import reddit as reddit_module
 import llm
 from models import (
-    AnalyzeRequest, AnalyzeResponse, AnalysisRun, RunStatus, Platform
+    AnalyzeRequest, AnalyzeResponse, AnalysisRun, RunStatus, Platform, Source
 )
 
 
@@ -67,7 +67,11 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
             total_comments += len(yt_comments)
 
             if yt_comments:
-                insights = llm.extract_insights(req.search_tag, yt_comments, Platform.youtube)
+                yt_sources = [
+                    Source(url=f"https://youtube.com/watch?v={v['video_id']}", title=v["title"])
+                    for v in videos
+                ]
+                insights = llm.extract_insights(req.search_tag, yt_comments, Platform.youtube, yt_sources)
                 all_insights.extend(i.model_dump() for i in insights)
 
         if Platform.reddit in req.platforms:
