@@ -340,18 +340,15 @@ export default function ResultsPage() {
           }
 
           const insights = data.insights ?? [];
-          const youtubeInsights = insights.filter(
-            (insight) => insight.platform === "youtube",
-          );
           const hasActiveFilters = contentType !== "all";
-          const filteredInsights = youtubeInsights.filter(
+          const filteredInsights = insights.filter(
             (insight) =>
               contentType === "all" || insight.content_type === contentType,
           );
           const hasNoResults =
             data.video_count === 0 &&
             data.comment_count === 0 &&
-            youtubeInsights.length === 0;
+            insights.length === 0;
 
           return (
             <div className="space-y-8">
@@ -387,7 +384,7 @@ export default function ResultsPage() {
                     {[
                       [`${data.video_count}`, "videos"],
                       [`${data.comment_count}`, "comments"],
-                      [`${youtubeInsights.length}`, "topics"],
+                      [`${insights.length}`, "topics"],
                     ].map(([value, label]) => (
                       <div
                         key={label}
@@ -446,8 +443,8 @@ export default function ResultsPage() {
                   </p>
                   <p className="mt-1.5 text-lg text-white">
                     {hasActiveFilters
-                      ? `${filteredInsights.length} of ${youtubeInsights.length} topics`
-                      : `${youtubeInsights.length} topics`}
+                      ? `${filteredInsights.length} of ${insights.length} topics`
+                      : `${insights.length} topics`}
                   </p>
                 </div>
                 {hasActiveFilters ? (
