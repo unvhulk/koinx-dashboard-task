@@ -138,42 +138,48 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
                 all_insights.extend(i.model_dump() for i in insights)
 
         if Platform.tiktok in req.platforms:
-            tt_queries = await query_expander.expand_query(req.search_tag) if req.enhanced_search else [req.search_tag]
-            await log("apify.tiktok.start", f"Fetching TikTok content for '{req.search_tag}'",
-                      queries=tt_queries, enhanced=req.enhanced_search)
-            tt_comments: list[str] = []
-            seen_tt: set[str] = set()
-            for q in tt_queries:
-                items = await apify_module.fetch_tiktok_comments(q, req.start_date, req.end_date, max_comments=100)
-                for t in items:
-                    if t not in seen_tt:
-                        seen_tt.add(t)
-                        tt_comments.append(t)
-            total_comments += len(tt_comments)
-            await log("apify.tiktok.done", f"{len(tt_comments)} TikTok items collected",
-                      comment_count=len(tt_comments))
-            if tt_comments:
-                insights = await llm.extract_insights(req.search_tag, tt_comments, Platform.tiktok)
-                all_insights.extend(i.model_dump() for i in insights)
+            try:
+                tt_queries = await query_expander.expand_query(req.search_tag) if req.enhanced_search else [req.search_tag]
+                await log("apify.tiktok.start", f"Fetching TikTok content for '{req.search_tag}'",
+                          queries=tt_queries, enhanced=req.enhanced_search)
+                tt_comments: list[str] = []
+                seen_tt: set[str] = set()
+                for q in tt_queries:
+                    items = await apify_module.fetch_tiktok_comments(q, req.start_date, req.end_date, max_comments=100)
+                    for t in items:
+                        if t not in seen_tt:
+                            seen_tt.add(t)
+                            tt_comments.append(t)
+                total_comments += len(tt_comments)
+                await log("apify.tiktok.done", f"{len(tt_comments)} TikTok items collected",
+                          comment_count=len(tt_comments))
+                if tt_comments:
+                    insights = await llm.extract_insights(req.search_tag, tt_comments, Platform.tiktok)
+                    all_insights.extend(i.model_dump() for i in insights)
+            except Exception as e:
+                await log("apify.tiktok.error", str(e), level="warn")
 
         if Platform.twitter in req.platforms:
-            tw_queries = await query_expander.expand_query(req.search_tag) if req.enhanced_search else [req.search_tag]
-            await log("apify.twitter.start", f"Fetching Twitter/X posts for '{req.search_tag}'",
-                      queries=tw_queries, enhanced=req.enhanced_search)
-            tw_comments: list[str] = []
-            seen_tw: set[str] = set()
-            for q in tw_queries:
-                items = await apify_module.fetch_twitter_comments(q, req.start_date, req.end_date, max_tweets=100)
-                for t in items:
-                    if t not in seen_tw:
-                        seen_tw.add(t)
-                        tw_comments.append(t)
-            total_comments += len(tw_comments)
-            await log("apify.twitter.done", f"{len(tw_comments)} tweets collected",
-                      comment_count=len(tw_comments))
-            if tw_comments:
-                insights = await llm.extract_insights(req.search_tag, tw_comments, Platform.twitter)
-                all_insights.extend(i.model_dump() for i in insights)
+            try:
+                tw_queries = await query_expander.expand_query(req.search_tag) if req.enhanced_search else [req.search_tag]
+                await log("apify.twitter.start", f"Fetching Twitter/X posts for '{req.search_tag}'",
+                          queries=tw_queries, enhanced=req.enhanced_search)
+                tw_comments: list[str] = []
+                seen_tw: set[str] = set()
+                for q in tw_queries:
+                    items = await apify_module.fetch_twitter_comments(q, req.start_date, req.end_date, max_tweets=100)
+                    for t in items:
+                        if t not in seen_tw:
+                            seen_tw.add(t)
+                            tw_comments.append(t)
+                total_comments += len(tw_comments)
+                await log("apify.twitter.done", f"{len(tw_comments)} tweets collected",
+                          comment_count=len(tw_comments))
+                if tw_comments:
+                    insights = await llm.extract_insights(req.search_tag, tw_comments, Platform.twitter)
+                    all_insights.extend(i.model_dump() for i in insights)
+            except Exception as e:
+                await log("apify.twitter.error", str(e), level="warn")
 
         for ins in all_insights:
             for k, v in ins.items():
