@@ -7,7 +7,7 @@ import { FilterBar } from "@/components/FilterBar";
 import { FrequencyChart } from "@/components/FrequencyChart";
 import { StatusPoller } from "@/components/StatusPoller";
 import { TopicCard } from "@/components/TopicCard";
-import type { ContentType, Platform } from "@/lib/types";
+import type { ContentType } from "@/lib/types";
 import { formatDateRange, formatRunDate } from "@/lib/utils";
 
 function ProcessingState({
@@ -199,7 +199,6 @@ function ProcessingState({
 export default function ResultsPage() {
   const params = useParams<{ id: string }>();
   const [contentType, setContentType] = useState<ContentType | "all">("all");
-  const [platform, setPlatform] = useState<Platform | "all">("all");
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-14">
@@ -285,62 +284,67 @@ export default function ResultsPage() {
           }
 
           const insights = data.insights ?? [];
-          const hasActiveFilters = contentType !== "all" || platform !== "all";
-          const filteredInsights = insights.filter((insight) => {
-            const matchesContentType =
-              contentType === "all" || insight.content_type === contentType;
-            const matchesPlatform =
-              platform === "all" || insight.platform === platform;
-
-            return matchesContentType && matchesPlatform;
-          });
+          const youtubeInsights = insights.filter(
+            (insight) => insight.platform === "youtube",
+          );
+          const hasActiveFilters = contentType !== "all";
+          const filteredInsights = youtubeInsights.filter(
+            (insight) =>
+              contentType === "all" || insight.content_type === contentType,
+          );
           const hasNoResults =
-            data.video_count === 0 && data.comment_count === 0 && insights.length === 0;
+            data.video_count === 0 &&
+            data.comment_count === 0 &&
+            youtubeInsights.length === 0;
 
           return (
             <div className="space-y-8">
-              <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <div className="rounded-[36px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-7 shadow-[0_30px_100px_rgba(2,8,23,0.35)]">
-                  <p className="text-xs uppercase tracking-[0.28em] text-cyan-100/55">
-                    Search Tag
-                  </p>
-                  <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-white">
-                    {data.search_tag}
-                  </h1>
-                  <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-300/80">
-                    <span className="rounded-full border border-white/10 bg-white/6 px-4 py-2">
-                      {formatDateRange(data.start_date, data.end_date)}
-                    </span>
-                    <span className="rounded-full border border-white/10 bg-white/6 px-4 py-2">
-                      Run created {formatRunDate(data.created_at)}
-                    </span>
-                    <span className="rounded-full border border-cyan-300/18 bg-cyan-300/12 px-4 py-2 text-cyan-100">
-                      {data.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
-                  {[
-                    [`${data.video_count}`, "videos analyzed"],
-                    [`${data.comment_count}`, "comments processed"],
-                    [`${insights.length}`, "topics found"],
-                  ].map(([value, label]) => (
-                    <div
-                      key={label}
-                      className="rounded-[28px] border border-white/10 bg-white/5 p-5"
-                    >
-                      <p className="text-4xl font-semibold text-white">{value}</p>
-                      <p className="mt-2 text-sm uppercase tracking-[0.24em] text-slate-300/50">
-                        {label}
-                      </p>
+              <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.04))] p-5 shadow-[0_24px_80px_rgba(2,8,23,0.28)] sm:p-6">
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-100/55">
+                      Analysis run
+                    </p>
+                    <h1 className="mt-2 truncate font-[family-name:var(--font-display)] text-[2rem] leading-tight text-white">
+                      {data.search_tag}
+                    </h1>
+                    <div className="mt-4 flex flex-wrap gap-2.5 text-[13px] text-slate-300/78">
+                      <span className="rounded-full border border-white/10 bg-white/6 px-3.5 py-1.5">
+                        {formatDateRange(data.start_date, data.end_date)}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/6 px-3.5 py-1.5">
+                        Created {formatRunDate(data.created_at)}
+                      </span>
+                      <span className="rounded-full border border-cyan-300/18 bg-cyan-300/12 px-3.5 py-1.5 text-cyan-100">
+                        {data.status}
+                      </span>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 xl:min-w-[390px]">
+                    {[
+                      [`${data.video_count}`, "videos"],
+                      [`${data.comment_count}`, "comments"],
+                      [`${youtubeInsights.length}`, "topics"],
+                    ].map(([value, label]) => (
+                      <div
+                        key={label}
+                        className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3"
+                      >
+                        <p className="text-2xl font-semibold leading-none text-white sm:text-[1.7rem]">
+                          {value}
+                        </p>
+                        <p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-slate-300/50">
+                          {label}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </section>
 
               {hasNoResults ? (
-                <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))] p-8 shadow-[0_24px_80px_rgba(2,8,23,0.28)]">
+                <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))] p-7 shadow-[0_24px_80px_rgba(2,8,23,0.28)] sm:p-8">
                   <p className="text-xs uppercase tracking-[0.26em] text-cyan-100/55">
                     No matching content found
                   </p>
@@ -350,7 +354,7 @@ export default function ResultsPage() {
                   <p className="mt-4 max-w-2xl text-slate-300/76">
                     The run completed, but there were no YouTube results to analyze,
                     so no comments or topic clusters could be generated. Try widening
-                    the date range, changing the search tag, or adding another platform.
+                    the date range or changing the search tag.
                   </p>
                   <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-300/80">
                     <span className="rounded-full border border-white/10 bg-white/6 px-4 py-2">
@@ -370,20 +374,18 @@ export default function ResultsPage() {
 
               <FilterBar
                 contentType={contentType}
-                platform={platform}
                 onContentTypeChange={setContentType}
-                onPlatformChange={setPlatform}
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-end justify-between gap-3 rounded-[28px] border border-white/10 bg-white/4 px-5 py-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/50">
                     Topic coverage
                   </p>
-                  <p className="mt-2 text-lg text-white">
+                  <p className="mt-1.5 text-lg text-white">
                     {hasActiveFilters
-                      ? `${filteredInsights.length} of ${insights.length} topics`
-                      : `${insights.length} topics`}
+                      ? `${filteredInsights.length} of ${youtubeInsights.length} topics`
+                      : `${youtubeInsights.length} topics`}
                   </p>
                 </div>
                 {hasActiveFilters ? (
@@ -404,6 +406,7 @@ export default function ResultsPage() {
                   <TopicCard
                     key={`${insight.topic}-${insight.platform}`}
                     insight={insight}
+                    runId={params.id}
                   />
                 ))}
               </section>

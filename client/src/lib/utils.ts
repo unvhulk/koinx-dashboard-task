@@ -45,9 +45,45 @@ export function cn(...parts: Array<string | false | null | undefined>) {
 }
 
 export function formatDateRange(start: string, end: string) {
-  return `${format(parseISO(start), "dd MMM yyyy")} - ${format(parseISO(end), "dd MMM yyyy")}`;
+  return `${format(parseApiDate(start), "dd MMM yyyy")} - ${format(parseApiDate(end), "dd MMM yyyy")}`;
 }
 
 export function formatRunDate(date: string) {
-  return format(parseISO(date), "dd MMM yyyy, hh:mm a");
+  return format(parseApiDate(date), "dd MMM yyyy, hh:mm a");
+}
+
+export function toSlug(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export function outlineToMarkdown(outline: {
+  title: string;
+  intro: string;
+  sections: { heading: string; points: string[] }[];
+  conclusion: string;
+}): string {
+  const lines: string[] = [`# ${outline.title}`, "", outline.intro, ""];
+  for (const section of outline.sections) {
+    lines.push(`## ${section.heading}`);
+    for (const point of section.points) {
+      lines.push(`- ${point}`);
+    }
+    lines.push("");
+  }
+  lines.push("---");
+  lines.push(outline.conclusion);
+  return lines.join("\n");
+}
+
+function parseApiDate(value: string) {
+  const normalized = hasExplicitTimezone(value) || isDateOnly(value) ? value : `${value}Z`;
+  return parseISO(normalized);
+}
+
+function hasExplicitTimezone(value: string) {
+  return /(?:Z|[+-]\d{2}:\d{2})$/.test(value);
+}
+
+function isDateOnly(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }

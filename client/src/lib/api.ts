@@ -1,4 +1,4 @@
-import type { AnalysisRun, AnalyzeRequest, BlogOutline } from "@/lib/types";
+import type { AnalysisRun, AnalyzeRequest, BlogOutline, SavedOutline } from "@/lib/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -46,4 +46,37 @@ export async function generateOutline(
     method: "POST",
     body: JSON.stringify({ topic, suggested_title, content_type }),
   });
+}
+
+export async function refineOutline(body: {
+  topic: string;
+  suggested_title: string;
+  content_type: string;
+  current_outline: BlogOutline;
+  instruction: string;
+}): Promise<BlogOutline> {
+  return request("/api/outline/refine", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function saveOutline(body: {
+  run_id: string;
+  topic: string;
+  topic_slug: string;
+  outline: BlogOutline;
+  modification?: string;
+}): Promise<SavedOutline> {
+  return request("/api/outline/save", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getSavedOutlines(
+  runId: string,
+  topicSlug: string,
+): Promise<SavedOutline[]> {
+  return request(`/api/outlines/${runId}?topic=${encodeURIComponent(topicSlug)}`);
 }

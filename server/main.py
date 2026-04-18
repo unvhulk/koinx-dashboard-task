@@ -16,6 +16,7 @@ import outline_generator
 from models import (
     AnalyzeRequest, AnalyzeResponse, AnalysisRun, RunStatus, Platform, Source,
     OutlineRequest, OutlineResponse, OutlineSection,
+    SaveOutlineRequest, SavedOutline, RefineOutlineRequest,
 )
 
 
@@ -65,7 +66,8 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
             videos: list[dict] = []
             for query in queries:
                 results = await youtube.search_videos(
-                    query, req.start_date, req.end_date, req.max_videos
+                    query, req.start_date, req.end_date, req.max_videos,
+                    min_views=req.min_views, min_subscribers=req.min_subscribers,
                 )
                 for v in results:
                     if v["video_id"] not in seen_video_ids:
@@ -170,6 +172,63 @@ async def outline(req: OutlineRequest):
         )
     except Exception as e:
         raise HTTPException(500, f"Outline generation failed: {str(e)}")
+
+
+@app.post("/api/outline/save", response_model=SavedOutline)
+async def save_outline(req: SaveOutlineRequest):
+    db = database.get_db()
+    doc = {
+        "run_id": req.run_id,
+        "topic": req.topic,
+        "topic_slug": req.topic_slug,
+        "outline": req.outline.model_dump(),
+        "modification": req.modification,
+        "generated_at": datetime.utcnow(),
+        "saved": True,
+    }
+    result = await db.outlines.insert_one(doc)
+    doc["id"] = str(result.inserted_id)
+    doc.pop("_id", None)
+    return SavedOutline(**doc)
+
+
+@app.get("/api/outlines/{run_id}")
+async def get_outlines(run_id: str, topic: str):
+    db = database.get_db()
+    cursor = db.outlines.find(
+        {"run_id": run_id, "topic_slug": topic}
+    ).sort("generated_at", -1)
+    items = []
+    async for doc in cursor:
+        doc["id"] = str(doc.pop("_id"))
+        if "generated_at" in doc and hasattr(doc["generated_at"], "isoformat"):
+            doc["generated_at"] = doc["generated_at"].isoformat()
+        items.append(doc)
+    return items
+
+
+@app.post("/api/outline/refine", response_model=OutlineResponse)
+async def refine_outline_endpoint(req: RefineOutlineRequest):
+    try:
+        result = await outline_generator.refine_outline(
+            req.topic,
+            req.suggested_title,
+            req.content_type.value,
+            req.current_outline.model_dump(),
+            req.instruction,
+        )
+        return OutlineResponse(
+            title=result.get("title", req.suggested_title),
+            intro=result.get("intro", ""),
+            sections=[
+                OutlineSection(heading=s["heading"], points=s.get("points", []))
+                for s in result.get("sections", [])
+            ],
+            conclusion=result.get("conclusion", ""),
+            estimated_words=int(result.get("estimated_words", 800)),
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Outline refinement failed: {str(e)}")
 
 
 @app.get("/api/results/{run_id}")

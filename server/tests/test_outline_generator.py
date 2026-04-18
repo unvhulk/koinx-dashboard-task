@@ -38,3 +38,17 @@ def test_parse_outline_sections_have_points():
 def test_parse_outline_raises_on_invalid_json():
     with pytest.raises(Exception):
         _parse_outline("this is not json")
+
+
+def test_parse_outline_missing_estimated_words_defaults():
+    raw = '{"title": "T", "intro": "I", "sections": [], "conclusion": "C"}'
+    result = _parse_outline(raw)
+    assert result["estimated_words"] == 800
+
+
+def test_parse_outline_missing_optional_fields_defaults():
+    raw = '{"title": "T", "sections": []}'
+    result = _parse_outline(raw)
+    assert result["intro"] == ""
+    assert result["conclusion"] == ""
+    assert result["estimated_words"] == 800

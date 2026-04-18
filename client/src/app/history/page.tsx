@@ -50,7 +50,7 @@ export default function HistoryPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-14">
-      <section className="rounded-[36px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-7 shadow-[0_30px_100px_rgba(2,8,23,0.35)]">
+      <section className="rounded-[36px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] p-6 shadow-[0_30px_100px_rgba(2,8,23,0.35)] sm:p-7">
         <p className="text-xs uppercase tracking-[0.28em] text-cyan-100/55">
           Analysis archive
         </p>
@@ -105,7 +105,9 @@ export default function HistoryPage() {
 
               {runs.map((run) => (
                 <tr key={run.id} className="transition hover:bg-white/4">
-                  <td className="px-6 py-5 font-medium text-white">{run.search_tag}</td>
+                  <td className="max-w-[260px] px-6 py-5 font-medium text-white">
+                    <span className="block truncate">{run.search_tag}</span>
+                  </td>
                   <td className="px-6 py-5 text-slate-300/72">
                     {formatDateRange(run.start_date, run.end_date)}
                   </td>
@@ -118,7 +120,7 @@ export default function HistoryPage() {
                   <td className="px-6 py-5">{run.comment_count}</td>
                   <td className="px-6 py-5">{run.insights?.length ?? "-"}</td>
                   <td className="px-6 py-5 text-slate-300/72">
-                    {formatRunDate(run.created_at)}
+                    <span className="block whitespace-nowrap">{formatRunDate(run.created_at)}</span>
                   </td>
                   <td className="px-6 py-5">
                     <Link

@@ -10,6 +10,8 @@ export interface AnalyzeRequest {
   platforms: Platform[];
   max_videos: number;
   enhanced_search: boolean;
+  min_views: number;
+  min_subscribers: number;
 }
 
 export interface Source {
@@ -52,4 +54,15 @@ export interface BlogOutline {
   sections: OutlineSection[];
   conclusion: string;
   estimated_words: number;
+}
+
+export interface SavedOutline {
+  id: string;
+  run_id: string;
+  topic: string;
+  topic_slug: string;
+  outline: BlogOutline;
+  modification?: string;
+  generated_at: string;
+  saved: boolean;
 }

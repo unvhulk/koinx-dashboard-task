@@ -1,13 +1,11 @@
 "use client";
 
-import type { ContentType, Platform } from "@/lib/types";
+import type { ContentType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface FilterBarProps {
   contentType: ContentType | "all";
-  platform: Platform | "all";
   onContentTypeChange: (value: ContentType | "all") => void;
-  onPlatformChange: (value: Platform | "all") => void;
 }
 
 const contentTypeOptions: Array<{ label: string; value: ContentType | "all" }> = [
@@ -15,12 +13,6 @@ const contentTypeOptions: Array<{ label: string; value: ContentType | "all" }> =
   { label: "Blog", value: "blog" },
   { label: "Video", value: "video" },
   { label: "Social", value: "social" },
-];
-
-const platformOptions: Array<{ label: string; value: Platform | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "YouTube", value: "youtube" },
-  { label: "Reddit", value: "reddit" },
 ];
 
 function FilterGroup<T extends string>({
@@ -66,25 +58,26 @@ function FilterGroup<T extends string>({
 
 export function FilterBar({
   contentType,
-  platform,
   onContentTypeChange,
-  onPlatformChange,
 }: FilterBarProps) {
   return (
-    <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[0_24px_80px_rgba(2,8,23,0.28)] backdrop-blur-xl">
-      <div className="grid gap-5 lg:grid-cols-2">
+    <div className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-5 shadow-[0_20px_64px_rgba(2,8,23,0.24)] backdrop-blur-xl sm:p-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <FilterGroup
           label="Content Type"
           value={contentType}
           options={contentTypeOptions}
           onChange={onContentTypeChange}
         />
-        <FilterGroup
-          label="Platform"
-          value={platform}
-          options={platformOptions}
-          onChange={onPlatformChange}
-        />
+        <div className="space-y-3 lg:justify-self-end">
+          <p className="text-xs uppercase tracking-[0.24em] text-slate-300/50">
+            Platform
+          </p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/24 bg-cyan-300/10 px-4 py-2 text-sm text-white">
+            <span className="h-2 w-2 rounded-full bg-cyan-200" />
+            YouTube only
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -39,18 +39,43 @@ def _parse_outline(raw: str) -> dict:
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-    return json.loads(raw)
+    data = json.loads(raw)
+    data.setdefault("estimated_words", 800)
+    data.setdefault("intro", "")
+    data.setdefault("conclusion", "")
+    data.setdefault("sections", [])
+    return data
 
 
-async def generate_outline(topic: str, title: str, content_type: str) -> dict:
-    prompt = USER_PROMPT.format(topic=topic, title=title, content_type=content_type)
+async def _call_llm(user_content: str) -> str:
     resp = await _client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": user_content},
         ],
         temperature=0,
         max_tokens=1024,
     )
-    return _parse_outline(resp.choices[0].message.content)
+    return resp.choices[0].message.content
+
+
+async def generate_outline(topic: str, title: str, content_type: str) -> dict:
+    prompt = USER_PROMPT.format(topic=topic, title=title, content_type=content_type)
+    return _parse_outline(await _call_llm(prompt))
+
+
+async def refine_outline(
+    topic: str, title: str, content_type: str,
+    current_outline: dict, instruction: str,
+) -> dict:
+    prompt = f"""You are a content strategist for KoinX, a crypto tax platform.
+Given this existing {content_type} outline for "{topic}":
+
+{json.dumps(current_outline, indent=2)}
+
+Apply this modification: {instruction}
+
+Return ONLY valid JSON with the exact same structure: title, intro, sections (array of heading + points), conclusion, estimated_words.
+No markdown fences, no explanation."""
+    return _parse_outline(await _call_llm(prompt))

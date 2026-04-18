@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { startAnalysis } from "@/lib/api";
-import type { AnalyzeRequest, Platform } from "@/lib/types";
+import type { AnalyzeRequest } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const defaultDates = {
@@ -12,10 +12,27 @@ const defaultDates = {
   end_date: "2024-03-31",
 };
 
-const PLATFORM_LABELS: Record<Platform, string> = {
-  youtube: "YouTube",
-  reddit: "Reddit",
-};
+const VIEW_PRESETS = [
+  { label: "Any", value: 0 },
+  { label: "1K+", value: 1_000 },
+  { label: "10K+", value: 10_000 },
+  { label: "100K+", value: 100_000 },
+  { label: "1M+", value: 1_000_000 },
+];
+
+const SUB_PRESETS = [
+  { label: "Any", value: 0 },
+  { label: "1K+", value: 1_000 },
+  { label: "10K+", value: 10_000 },
+  { label: "100K+", value: 100_000 },
+  { label: "1M+", value: 1_000_000 },
+];
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${n / 1_000_000}M`;
+  if (n >= 1_000) return `${n / 1_000}K`;
+  return String(n);
+}
 
 export function SearchForm() {
   const router = useRouter();
@@ -25,21 +42,11 @@ export function SearchForm() {
     platforms: ["youtube"],
     max_videos: 20,
     enhanced_search: false,
+    min_views: 0,
+    min_subscribers: 0,
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const youtubeSelected = form.platforms.includes("youtube");
-
-  function togglePlatform(platform: Platform) {
-    setForm((current) => {
-      const exists = current.platforms.includes(platform);
-      const nextPlatforms = exists
-        ? current.platforms.filter((value) => value !== platform)
-        : [...current.platforms, platform];
-      return { ...current, platforms: nextPlatforms };
-    });
-  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,17 +61,13 @@ export function SearchForm() {
       return;
     }
 
-    if (!form.platforms.length) {
-      setError("Please select at least one platform.");
-      return;
-    }
-
     try {
       setSubmitting(true);
       setError(null);
       const response = await startAnalysis({
         ...form,
         search_tag: form.search_tag.trim(),
+        platforms: ["youtube"],
       });
       router.push(`/results/${response.run_id}`);
     } catch (submitError) {
@@ -137,33 +140,15 @@ export function SearchForm() {
           </div>
         </div>
 
-        {/* Platforms */}
-        <div className="space-y-2">
+        <div className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
-            Where to look
+            Platform
           </p>
-          <div className="flex flex-wrap gap-3">
-            {(["youtube", "reddit"] as Platform[]).map((platform) => {
-              const checked = form.platforms.includes(platform);
-              return (
-                <button
-                  key={platform}
-                  type="button"
-                  onClick={() => togglePlatform(platform)}
-                  className={cn(
-                    "rounded-full border px-5 py-2.5 text-sm font-medium transition",
-                    checked
-                      ? "border-cyan-300/30 bg-cyan-300/12 text-white"
-                      : "border-white/10 bg-white/6 text-slate-300 hover:border-white/20 hover:text-white",
-                  )}
-                >
-                  {PLATFORM_LABELS[platform]}
-                </button>
-              );
-            })}
+          <div className="mt-2 inline-flex rounded-full border border-cyan-300/24 bg-cyan-300/12 px-4 py-2 text-sm font-medium text-white">
+            YouTube
           </div>
-          <p className="px-1 text-xs text-slate-400/60">
-            Select where to collect comments from
+          <p className="mt-2 px-1 text-xs text-slate-400/60">
+            YouTube-only analysis is enabled for now.
           </p>
         </div>
 
@@ -198,32 +183,92 @@ export function SearchForm() {
           </button>
         </div>
 
-        {/* Max videos — only when YouTube selected */}
-        {youtubeSelected && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
+              How many videos to scan
+            </p>
+            <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-sm text-white">
+              {form.max_videos}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={50}
+            value={form.max_videos}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, max_videos: Number(event.target.value) }))
+            }
+            className="koinx-range w-full"
+          />
+          <p className="px-1 text-xs text-slate-400/60">
+            More videos = more comments = better results, but takes longer
+          </p>
+        </div>
+
+        {/* Quality filters */}
+        <div className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 space-y-4">
+          <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
+            Source quality filters
+          </p>
+
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
-                How many videos to scan
-              </p>
-              <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-sm text-white">
-                {form.max_videos}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-400/70">Min video views</span>
+              <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs text-white">
+                {form.min_views === 0 ? "Any" : formatCount(form.min_views)}
               </span>
             </div>
-            <input
-              type="range"
-              min={1}
-              max={50}
-              value={form.max_videos}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, max_videos: Number(event.target.value) }))
-              }
-              className="koinx-range w-full"
-            />
-            <p className="px-1 text-xs text-slate-400/60">
-              More videos = more comments = better results, but takes longer
-            </p>
+            <div className="flex flex-wrap gap-2">
+              {VIEW_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setForm((c) => ({ ...c, min_views: preset.value }))}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs transition",
+                    form.min_views === preset.value
+                      ? "border-cyan-300/40 bg-cyan-300/18 text-cyan-100"
+                      : "border-white/10 bg-white/6 text-slate-300/70 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-400/70">Min channel subscribers</span>
+              <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs text-white">
+                {form.min_subscribers === 0 ? "Any" : formatCount(form.min_subscribers)}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SUB_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setForm((c) => ({ ...c, min_subscribers: preset.value }))}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs transition",
+                    form.min_subscribers === preset.value
+                      ? "border-cyan-300/40 bg-cyan-300/18 text-cyan-100"
+                      : "border-white/10 bg-white/6 text-slate-300/70 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400/60">
+            Filters out low-quality sources. Strict filters may reduce video count.
+          </p>
+        </div>
 
         {error ? (
           <p className="rounded-2xl border border-rose-300/14 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">

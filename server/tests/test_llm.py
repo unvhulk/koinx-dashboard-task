@@ -98,3 +98,12 @@ def test_parse_strips_markdown_fences():
 def test_parse_empty_topics():
     raw = '{"topics": []}'
     assert _parse_response(raw) == []
+
+
+def test_parse_invalid_json_raises():
+    with pytest.raises(Exception):
+        _parse_response("not json at all")
+
+
+def test_parse_missing_topics_key_returns_empty():
+    assert _parse_response('{"results": []}') == []

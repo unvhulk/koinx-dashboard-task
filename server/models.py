@@ -65,6 +65,8 @@ class AnalyzeRequest(BaseModel):
     platforms: list[Platform] = [Platform.youtube]
     max_videos: int = Field(default=20, ge=1, le=50)
     enhanced_search: bool = False
+    min_views: int = Field(default=0, ge=0)
+    min_subscribers: int = Field(default=0, ge=0)
 
 
 class AnalyzeResponse(BaseModel):
@@ -89,3 +91,30 @@ class OutlineResponse(BaseModel):
     sections: list[OutlineSection]
     conclusion: str
     estimated_words: int
+
+
+class SaveOutlineRequest(BaseModel):
+    run_id: str
+    topic: str
+    topic_slug: str
+    outline: OutlineResponse
+    modification: Optional[str] = None
+
+
+class SavedOutline(BaseModel):
+    id: Optional[str] = None
+    run_id: str
+    topic: str
+    topic_slug: str
+    outline: OutlineResponse
+    modification: Optional[str] = None
+    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    saved: bool = False
+
+
+class RefineOutlineRequest(BaseModel):
+    topic: str
+    suggested_title: str
+    content_type: ContentType
+    current_outline: OutlineResponse
+    instruction: str
