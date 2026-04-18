@@ -24,6 +24,7 @@ export function SearchForm() {
     ...defaultDates,
     platforms: ["youtube"],
     max_videos: 20,
+    enhanced_search: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -164,6 +165,37 @@ export function SearchForm() {
           <p className="px-1 text-xs text-slate-400/60">
             Select where to collect comments from
           </p>
+        </div>
+
+        {/* Enhanced search toggle */}
+        <div className="flex items-start justify-between gap-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-white">Enhanced search</p>
+            <p className="mt-0.5 text-xs leading-5 text-slate-400/65">
+              AI generates more search variants to find more diverse topics — takes ~2× longer
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.enhanced_search}
+            onClick={() => setForm((c) => ({ ...c, enhanced_search: !c.enhanced_search }))}
+            className={cn(
+              "mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors duration-200",
+              form.enhanced_search
+                ? "border-cyan-300/40 bg-cyan-300/25"
+                : "border-white/15 bg-white/8",
+            )}
+          >
+            <span
+              className={cn(
+                "block h-4 w-4 rounded-full transition-transform duration-200",
+                form.enhanced_search
+                  ? "translate-x-6 bg-cyan-300"
+                  : "translate-x-1 bg-slate-400",
+              )}
+            />
+          </button>
         </div>
 
         {/* Max videos — only when YouTube selected */}

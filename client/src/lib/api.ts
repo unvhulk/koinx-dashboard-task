@@ -1,4 +1,4 @@
-import type { AnalysisRun, AnalyzeRequest } from "@/lib/types";
+import type { AnalysisRun, AnalyzeRequest, BlogOutline } from "@/lib/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -35,4 +35,15 @@ export async function getResults(runId: string): Promise<AnalysisRun> {
 
 export async function getHistory(): Promise<AnalysisRun[]> {
   return request("/api/history");
+}
+
+export async function generateOutline(
+  topic: string,
+  suggested_title: string,
+  content_type: string,
+): Promise<BlogOutline> {
+  return request("/api/outline", {
+    method: "POST",
+    body: JSON.stringify({ topic, suggested_title, content_type }),
+  });
 }

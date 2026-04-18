@@ -9,6 +9,7 @@ export interface AnalyzeRequest {
   end_date: string;
   platforms: Platform[];
   max_videos: number;
+  enhanced_search: boolean;
 }
 
 export interface Source {
@@ -38,4 +39,17 @@ export interface AnalysisRun {
   insight_count?: number;
   created_at: string;
   insights?: Insight[];
+}
+
+export interface OutlineSection {
+  heading: string;
+  points: string[];
+}
+
+export interface BlogOutline {
+  title: string;
+  intro: string;
+  sections: OutlineSection[];
+  conclusion: string;
+  estimated_words: number;
 }

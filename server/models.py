@@ -64,8 +64,28 @@ class AnalyzeRequest(BaseModel):
     end_date: date
     platforms: list[Platform] = [Platform.youtube]
     max_videos: int = Field(default=20, ge=1, le=50)
+    enhanced_search: bool = False
 
 
 class AnalyzeResponse(BaseModel):
     run_id: str
     status: RunStatus
+
+
+class OutlineRequest(BaseModel):
+    topic: str
+    suggested_title: str
+    content_type: ContentType
+
+
+class OutlineSection(BaseModel):
+    heading: str
+    points: list[str]
+
+
+class OutlineResponse(BaseModel):
+    title: str
+    intro: str
+    sections: list[OutlineSection]
+    conclusion: str
+    estimated_words: int

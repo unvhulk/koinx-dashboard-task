@@ -285,6 +285,7 @@ export default function ResultsPage() {
           }
 
           const insights = data.insights ?? [];
+          const hasActiveFilters = contentType !== "all" || platform !== "all";
           const filteredInsights = insights.filter((insight) => {
             const matchesContentType =
               contentType === "all" || insight.content_type === contentType;
@@ -293,6 +294,8 @@ export default function ResultsPage() {
 
             return matchesContentType && matchesPlatform;
           });
+          const hasNoResults =
+            data.video_count === 0 && data.comment_count === 0 && insights.length === 0;
 
           return (
             <div className="space-y-8">
@@ -336,7 +339,34 @@ export default function ResultsPage() {
                 </div>
               </section>
 
-              <FrequencyChart insights={filteredInsights} />
+              {hasNoResults ? (
+                <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))] p-8 shadow-[0_24px_80px_rgba(2,8,23,0.28)]">
+                  <p className="text-xs uppercase tracking-[0.26em] text-cyan-100/55">
+                    No matching content found
+                  </p>
+                  <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-white">
+                    No videos were found for this tag and date range.
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-slate-300/76">
+                    The run completed, but there were no YouTube results to analyze,
+                    so no comments or topic clusters could be generated. Try widening
+                    the date range, changing the search tag, or adding another platform.
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-300/80">
+                    <span className="rounded-full border border-white/10 bg-white/6 px-4 py-2">
+                      0 videos found
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/6 px-4 py-2">
+                      0 comments analyzed
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/6 px-4 py-2">
+                      0 topics generated
+                    </span>
+                  </div>
+                </section>
+              ) : (
+                <FrequencyChart insights={filteredInsights} />
+              )}
 
               <FilterBar
                 contentType={contentType}
@@ -344,6 +374,24 @@ export default function ResultsPage() {
                 onContentTypeChange={setContentType}
                 onPlatformChange={setPlatform}
               />
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/50">
+                    Topic coverage
+                  </p>
+                  <p className="mt-2 text-lg text-white">
+                    {hasActiveFilters
+                      ? `${filteredInsights.length} of ${insights.length} topics`
+                      : `${insights.length} topics`}
+                  </p>
+                </div>
+                {hasActiveFilters ? (
+                  <p className="text-sm text-slate-300/68">
+                    Filters are showing a narrower slice of the full run.
+                  </p>
+                ) : null}
+              </div>
 
               {error ? (
                 <p className="rounded-2xl border border-amber-300/14 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
@@ -362,7 +410,9 @@ export default function ResultsPage() {
 
               {!filteredInsights.length ? (
                 <div className="rounded-[30px] border border-white/10 bg-white/5 p-8 text-center text-slate-300/72">
-                  No topics match the active filters.
+                  {hasActiveFilters
+                    ? "No topics match the active filters."
+                    : "No topics were generated for this run."}
                 </div>
               ) : null}
             </div>

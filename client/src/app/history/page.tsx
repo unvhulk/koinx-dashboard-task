@@ -13,21 +13,39 @@ export default function HistoryPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let intervalId: number | undefined;
+    let cancelled = false;
+
     async function load() {
       try {
         const response = await getHistory();
+        if (cancelled) return;
         setRuns(response);
         setError(null);
+        const hasActive = response.some(
+          (r) => r.status === "pending" || r.status === "processing",
+        );
+        if (!hasActive && intervalId) {
+          window.clearInterval(intervalId);
+        }
       } catch (fetchError) {
-        const message =
-          fetchError instanceof Error ? fetchError.message : "Unable to load history";
-        setError(message);
+        if (!cancelled) {
+          const message =
+            fetchError instanceof Error ? fetchError.message : "Unable to load history";
+          setError(message);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     void load();
+    intervalId = window.setInterval(() => void load(), 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   return (

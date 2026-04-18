@@ -1,0 +1,1 @@
+{"nodes": [{"id": "config_settings", "label": "Settings (Pydantic BaseSettings)", "file_type": "code", "source_file": "config.py", "source_location": "line 4-16", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

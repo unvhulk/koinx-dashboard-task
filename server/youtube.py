@@ -49,14 +49,17 @@ async def fetch_comments(video_id: str, max_comments: int = 100) -> list[str]:
                 resp.raise_for_status()
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 403:
-                    # Comments disabled on this video
                     break
+                if e.response.status_code == 429 or "quotaExceeded" in e.response.text:
+                    raise RuntimeError("YouTube API quota exceeded. Try again tomorrow.") from e
                 raise
             data = resp.json()
+            seen: set[str] = set()
             for item in data.get("items", []):
-                text = item["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
-                if text.strip():
-                    comments.append(text.strip())
+                text = item["snippet"]["topLevelComment"]["snippet"]["textDisplay"].strip()
+                if text and text not in seen:
+                    seen.add(text)
+                    comments.append(text)
             page_token = data.get("nextPageToken")
             if not page_token or len(comments) >= max_comments:
                 break

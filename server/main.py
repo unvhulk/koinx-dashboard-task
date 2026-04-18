@@ -1,3 +1,4 @@
+import os
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -10,8 +11,11 @@ import database
 import youtube
 import reddit as reddit_module
 import llm
+import query_expander
+import outline_generator
 from models import (
-    AnalyzeRequest, AnalyzeResponse, AnalysisRun, RunStatus, Platform, Source
+    AnalyzeRequest, AnalyzeResponse, AnalysisRun, RunStatus, Platform, Source,
+    OutlineRequest, OutlineResponse, OutlineSection,
 )
 
 
@@ -23,8 +27,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="KoinX Content Ideas API", lifespan=lifespan)
-
-import os
 
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
@@ -52,9 +54,24 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
         total_comments = 0
 
         if Platform.youtube in req.platforms:
-            videos = await youtube.search_videos(
-                req.search_tag, req.start_date, req.end_date, req.max_videos
-            )
+            # Enhanced search: expand tag into multiple queries
+            if req.enhanced_search:
+                queries = await query_expander.expand_query(req.search_tag)
+            else:
+                queries = [req.search_tag]
+
+            # Fetch videos for each query, deduplicate by video_id
+            seen_video_ids: set[str] = set()
+            videos: list[dict] = []
+            for query in queries:
+                results = await youtube.search_videos(
+                    query, req.start_date, req.end_date, req.max_videos
+                )
+                for v in results:
+                    if v["video_id"] not in seen_video_ids:
+                        seen_video_ids.add(v["video_id"])
+                        videos.append(v)
+
             total_videos += len(videos)
 
             comment_tasks = [youtube.fetch_comments(v["video_id"]) for v in videos]
@@ -87,7 +104,7 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
                 insights = await llm.extract_insights(req.search_tag, rd_comments, Platform.reddit)
                 all_insights.extend(i.model_dump() for i in insights)
 
-        # Serialize dates in insights
+        # Serialize any datetime fields nested in insights
         for ins in all_insights:
             for k, v in ins.items():
                 if hasattr(v, 'isoformat'):
@@ -135,6 +152,26 @@ async def analyze(req: AnalyzeRequest, background_tasks: BackgroundTasks):
     return AnalyzeResponse(run_id=run_id, status=RunStatus.pending)
 
 
+@app.post("/api/outline", response_model=OutlineResponse)
+async def outline(req: OutlineRequest):
+    try:
+        result = await outline_generator.generate_outline(
+            req.topic, req.suggested_title, req.content_type.value
+        )
+        return OutlineResponse(
+            title=result.get("title", req.suggested_title),
+            intro=result.get("intro", ""),
+            sections=[
+                OutlineSection(heading=s["heading"], points=s.get("points", []))
+                for s in result.get("sections", [])
+            ],
+            conclusion=result.get("conclusion", ""),
+            estimated_words=int(result.get("estimated_words", 800)),
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Outline generation failed: {str(e)}")
+
+
 @app.get("/api/results/{run_id}")
 async def get_results(run_id: str):
     db = database.get_db()
@@ -145,7 +182,6 @@ async def get_results(run_id: str):
     if not doc:
         raise HTTPException(404, "Run not found")
     doc["id"] = str(doc.pop("_id"))
-    # Serialize datetime fields
     for k in ("created_at", "start_date", "end_date"):
         if k in doc and hasattr(doc[k], "isoformat"):
             doc[k] = doc[k].isoformat()
