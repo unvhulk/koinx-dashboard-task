@@ -68,61 +68,64 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
         total_comments = 0
 
         if Platform.youtube in req.platforms:
-            if req.enhanced_search:
-                queries = await query_expander.expand_query(req.search_tag)
-                await log("query.expand", f"{len(queries)} search variants generated", queries=queries)
-            else:
-                queries = [req.search_tag]
+            try:
+                if req.enhanced_search:
+                    queries = await query_expander.expand_query(req.search_tag)
+                    await log("query.expand", f"{len(queries)} search variants generated", queries=queries)
+                else:
+                    queries = [req.search_tag]
 
-            seen_video_ids: set[str] = set()
-            videos: list[dict] = []
-            for i, query in enumerate(queries, 1):
-                results = await youtube.search_videos(
-                    query, req.start_date, req.end_date, req.max_videos,
-                    min_views=req.min_views, min_subscribers=req.min_subscribers,
-                    min_comments=req.min_comments,
-                    video_duration=req.video_duration.value,
-                    sort_order=req.sort_order.value,
-                    india_focus=req.india_focus,
-                )
-                added = 0
-                for v in results:
-                    if v["video_id"] not in seen_video_ids:
-                        seen_video_ids.add(v["video_id"])
-                        videos.append(v)
-                        added += 1
-                await log("search.video",
-                          f"Query {i}/{len(queries)}: {added} videos kept after quality filter",
-                          query=query, found=len(results), kept=added)
+                seen_video_ids: set[str] = set()
+                videos: list[dict] = []
+                for i, query in enumerate(queries, 1):
+                    results = await youtube.search_videos(
+                        query, req.start_date, req.end_date, req.max_videos,
+                        min_views=req.min_views, min_subscribers=req.min_subscribers,
+                        min_comments=req.min_comments,
+                        video_duration=req.video_duration.value,
+                        sort_order=req.sort_order.value,
+                        india_focus=req.india_focus,
+                    )
+                    added = 0
+                    for v in results:
+                        if v["video_id"] not in seen_video_ids:
+                            seen_video_ids.add(v["video_id"])
+                            videos.append(v)
+                            added += 1
+                    await log("search.video",
+                              f"Query {i}/{len(queries)}: {added} videos kept after quality filter",
+                              query=query, found=len(results), kept=added)
 
-            total_videos += len(videos)
-            await log("filter.quality", f"{total_videos} unique videos queued for comment fetch",
-                      video_count=total_videos)
+                total_videos += len(videos)
+                await log("filter.quality", f"{total_videos} unique videos queued for comment fetch",
+                          video_count=total_videos)
 
-            comment_tasks = [youtube.fetch_comments(v["video_id"]) for v in videos]
-            results = await asyncio.gather(*comment_tasks, return_exceptions=True)
+                comment_tasks = [youtube.fetch_comments(v["video_id"]) for v in videos]
+                results = await asyncio.gather(*comment_tasks, return_exceptions=True)
 
-            yt_comments = []
-            for r in results:
-                if isinstance(r, list):
-                    yt_comments.extend(r)
-            total_comments += len(yt_comments)
-            await log("comments.fetch", f"{total_comments} raw comments collected across {total_videos} videos",
-                      raw_comment_count=total_comments, video_count=total_videos)
+                yt_comments = []
+                for r in results:
+                    if isinstance(r, list):
+                        yt_comments.extend(r)
+                total_comments += len(yt_comments)
+                await log("comments.fetch", f"{total_comments} raw comments collected across {total_videos} videos",
+                          raw_comment_count=total_comments, video_count=total_videos)
 
-            if yt_comments:
-                yt_sources = [
-                    Source(url=f"https://youtube.com/watch?v={v['video_id']}", title=v["title"])
-                    for v in videos
-                ]
-                await log("llm.start", f"Sending {len(yt_comments)} comments to LLM for topic extraction",
-                          comment_count=len(yt_comments))
-                llm_t0 = datetime.utcnow()
-                insights = await llm.extract_insights(req.search_tag, yt_comments, Platform.youtube, yt_sources)
-                duration_ms = int((datetime.utcnow() - llm_t0).total_seconds() * 1000)
-                await log("llm.done", f"{len(insights)} topics extracted",
-                          topic_count=len(insights), duration_ms=duration_ms)
-                all_insights.extend(i.model_dump() for i in insights)
+                if yt_comments:
+                    yt_sources = [
+                        Source(url=f"https://youtube.com/watch?v={v['video_id']}", title=v["title"])
+                        for v in videos
+                    ]
+                    await log("llm.start", f"Sending {len(yt_comments)} comments to LLM for topic extraction",
+                              comment_count=len(yt_comments))
+                    llm_t0 = datetime.utcnow()
+                    insights = await llm.extract_insights(req.search_tag, yt_comments, Platform.youtube, yt_sources)
+                    duration_ms = int((datetime.utcnow() - llm_t0).total_seconds() * 1000)
+                    await log("llm.done", f"{len(insights)} topics extracted",
+                              topic_count=len(insights), duration_ms=duration_ms)
+                    all_insights.extend(i.model_dump() for i in insights)
+            except Exception as e:
+                await log("youtube.error", str(e), level="warn")
 
         if Platform.reddit in req.platforms:
             loop = asyncio.get_event_loop()
