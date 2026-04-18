@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 
 import { getHistory } from "@/lib/api";
 import type { AnalysisRun } from "@/lib/types";
-import { formatDateRange, formatRunDate } from "@/lib/utils";
+import {
+  formatCompactDateRange,
+  formatRunDateCompact,
+  formatRunTime,
+} from "@/lib/utils";
 
 export default function HistoryPage() {
   const [runs, setRuns] = useState<AnalysisRun[]>([]);
@@ -64,25 +68,34 @@ export default function HistoryPage() {
       </section>
 
       <section className="mt-8 overflow-hidden rounded-[32px] border border-white/10 bg-white/5 shadow-[0_24px_80px_rgba(2,8,23,0.28)] backdrop-blur-xl">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left">
+        <div>
+          <table className="w-full table-fixed text-left">
+            <colgroup>
+              <col className="w-[24%]" />
+              <col className="w-[16%]" />
+              <col className="w-[12%]" />
+              <col className="w-[7%]" />
+              <col className="w-[9%]" />
+              <col className="w-[7%]" />
+              <col className="w-[13%]" />
+              <col className="w-[12%]" />
+            </colgroup>
             <thead className="border-b border-white/10 bg-black/10 text-xs uppercase tracking-[0.24em] text-slate-300/55">
               <tr>
-                <th className="px-6 py-4">Search Tag</th>
-                <th className="px-6 py-4">Date Range</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Videos</th>
-                <th className="px-6 py-4">Comments</th>
-                <th className="px-6 py-4">Topics</th>
-                <th className="px-6 py-4">Date Run</th>
-                <th className="px-6 py-4">View</th>
-                <th className="px-6 py-4">Logs</th>
+                <th className="px-5 py-4">Search Tag</th>
+                <th className="px-4 py-4">Range</th>
+                <th className="px-4 py-4">Status</th>
+                <th className="px-3 py-4 text-center">Videos</th>
+                <th className="px-3 py-4 text-center">Comments</th>
+                <th className="px-3 py-4 text-center">Topics</th>
+                <th className="px-4 py-4">Run</th>
+                <th className="px-4 py-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/8 text-sm text-slate-200/82">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
+                  <td colSpan={8} className="px-6 py-14 text-center text-slate-300/70">
                     Loading history...
                   </td>
                 </tr>
@@ -90,7 +103,7 @@ export default function HistoryPage() {
 
               {!loading && error ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-14 text-center text-rose-100">
+                  <td colSpan={8} className="px-6 py-14 text-center text-rose-100">
                     {error}
                   </td>
                 </tr>
@@ -98,7 +111,7 @@ export default function HistoryPage() {
 
               {!loading && !error && !runs.length ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
+                  <td colSpan={8} className="px-6 py-14 text-center text-slate-300/70">
                     No runs yet. Start an analysis from the home page.
                   </td>
                 </tr>
@@ -106,38 +119,45 @@ export default function HistoryPage() {
 
               {runs.map((run) => (
                 <tr key={run.id} className="transition hover:bg-white/4">
-                  <td className="max-w-[260px] px-6 py-5 font-medium text-white">
+                  <td className="max-w-[260px] px-5 py-4 font-medium text-white">
                     <span className="block truncate">{run.search_tag}</span>
                   </td>
-                  <td className="px-6 py-5 text-slate-300/72">
-                    {formatDateRange(run.start_date, run.end_date)}
+                  <td className="px-4 py-4 text-slate-300/72">
+                    <span className="block truncate">
+                      {formatCompactDateRange(run.start_date, run.end_date)}
+                    </span>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-4 py-4">
                     <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-slate-100">
                       {run.status}
                     </span>
                   </td>
-                  <td className="px-6 py-5">{run.video_count}</td>
-                  <td className="px-6 py-5">{run.comment_count}</td>
-                  <td className="px-6 py-5">{run.insight_count ?? "-"}</td>
-                  <td className="px-6 py-5 text-slate-300/72">
-                    <span className="block whitespace-nowrap">{formatRunDate(run.created_at)}</span>
+                  <td className="px-3 py-4 text-center">{run.video_count}</td>
+                  <td className="px-3 py-4 text-center">{run.comment_count}</td>
+                  <td className="px-3 py-4 text-center">{run.insight_count ?? "-"}</td>
+                  <td className="px-4 py-4 text-slate-300/72">
+                    <span className="block whitespace-nowrap">
+                      {formatRunDateCompact(run.created_at)}
+                    </span>
+                    <span className="mt-0.5 block whitespace-nowrap text-xs text-slate-400/55">
+                      {formatRunTime(run.created_at)}
+                    </span>
                   </td>
-                  <td className="px-6 py-5">
-                    <Link
-                      href={`/results/${run.id}`}
-                      className="inline-flex rounded-full border border-cyan-300/24 bg-cyan-300/12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300/18 hover:text-white"
-                    >
-                      View
-                    </Link>
-                  </td>
-                  <td className="px-6 py-5">
-                    <Link
-                      href={`/logs/${run.id}`}
-                      className="inline-flex rounded-full border border-white/10 bg-white/6 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/70 transition hover:bg-white/10 hover:text-white"
-                    >
-                      Logs
-                    </Link>
+                  <td className="px-4 py-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/results/${run.id}`}
+                        className="inline-flex rounded-full border border-cyan-300/24 bg-cyan-300/12 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-100 transition hover:bg-cyan-300/18 hover:text-white"
+                      >
+                        View
+                      </Link>
+                      <Link
+                        href={`/logs/${run.id}`}
+                        className="inline-flex rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300/70 transition hover:bg-white/10 hover:text-white"
+                      >
+                        Logs
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

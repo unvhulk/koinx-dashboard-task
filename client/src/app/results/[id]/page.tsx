@@ -1,22 +1,135 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
+import { getLogs } from "@/lib/api";
 import { FilterBar } from "@/components/FilterBar";
 import { FrequencyChart } from "@/components/FrequencyChart";
 import { StatusPoller } from "@/components/StatusPoller";
 import { TopicCard } from "@/components/TopicCard";
-import type { ContentType } from "@/lib/types";
+import type { ContentType, PipelineLog } from "@/lib/types";
 import { formatDateRange, formatRunDate } from "@/lib/utils";
 
+const TERMINAL_LOG_STAGES = new Set(["pipeline.done", "pipeline.error"]);
+const LOG_LEVEL_STYLES = {
+  info: "border-cyan-300/20 bg-cyan-300/10 text-cyan-200",
+  warn: "border-amber-300/20 bg-amber-300/10 text-amber-200",
+  error: "border-rose-300/20 bg-rose-300/10 text-rose-200",
+};
+
+function formatLogTime(ts: string): string {
+  return new Intl.DateTimeFormat(undefined, { timeStyle: "medium" }).format(
+    new Date(ts),
+  );
+}
+
+function ProcessingLogPanel({ runId }: { runId: string }) {
+  const [logs, setLogs] = useState<PipelineLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let intervalId: number | undefined;
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const items = await getLogs(runId);
+        if (cancelled) return;
+        setLogs(items);
+        setLoading(false);
+
+        if (items.some((log) => TERMINAL_LOG_STAGES.has(log.stage)) && intervalId) {
+          window.clearInterval(intervalId);
+        }
+      } catch {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+    intervalId = window.setInterval(() => void load(), 3000);
+
+    return () => {
+      cancelled = true;
+      if (intervalId) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [runId]);
+
+  const recentLogs = logs.slice(-5).reverse();
+
+  return (
+    <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035))] p-5 shadow-[0_24px_80px_rgba(2,8,23,0.28)] backdrop-blur-xl sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/55">
+            Pipeline activity
+          </p>
+          <h2 className="mt-2 font-[family-name:var(--font-display)] text-2xl text-white">
+            Live processing logs
+          </h2>
+        </div>
+        <Link
+          href={`/logs/${runId}`}
+          className="inline-flex rounded-full border border-white/10 bg-white/6 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-200/80 transition hover:bg-white/10 hover:text-white"
+        >
+          Full logs
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-5 text-sm text-slate-300/70">
+          Loading log stream...
+        </div>
+      ) : recentLogs.length ? (
+        <ul className="mt-5 space-y-3">
+          {recentLogs.map((log, index) => (
+            <li
+              key={`${log.ts}-${log.stage}-${index}`}
+              className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3.5"
+            >
+              <div className="flex flex-wrap items-start gap-2.5">
+                <span className="shrink-0 font-mono text-[11px] text-slate-500/60">
+                  {formatLogTime(log.ts)}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] ${
+                    LOG_LEVEL_STYLES[log.level] ?? LOG_LEVEL_STYLES.info
+                  }`}
+                >
+                  {log.level}
+                </span>
+                <span className="shrink-0 font-mono text-[11px] text-slate-400/70">
+                  {log.stage}
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-200/84">{log.message}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-5 text-sm text-slate-300/70">
+          No logs yet. They will appear as soon as the pipeline starts emitting events.
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ProcessingState({
+  runId,
   searchTag,
   startDate,
   endDate,
   createdAt,
   status,
 }: {
+  runId: string;
   searchTag?: string;
   startDate?: string;
   endDate?: string;
@@ -107,90 +220,32 @@ function ProcessingState({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[32px] border border-white/10 bg-white/5 p-6">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-300/50">
-                Topic Momentum
-              </p>
-              <div className="mt-3 h-10 w-64 rounded-2xl bg-white/8" />
-            </div>
+      <ProcessingLogPanel runId={runId} />
+
+      <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-6 shadow-[0_24px_80px_rgba(2,8,23,0.22)]">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-300/50">
+              What happens next
+            </p>
+            <h3 className="mt-2 font-[family-name:var(--font-display)] text-2xl text-white">
+              Insights will replace this view as soon as processing completes.
+            </h3>
           </div>
-          <div className="grid h-[320px] grid-cols-6 items-end gap-4">
-            {[42, 70, 55, 82, 64, 48].map((height, index) => (
-              <div key={height + index} className="space-y-3">
-                <div
-                  className="animate-loading-shimmer rounded-t-[18px] bg-[linear-gradient(180deg,rgba(126,244,255,0.45),rgba(126,244,255,0.14))]"
-                  style={{ height: `${height}%` }}
-                />
-                <div className="mx-auto h-3 w-16 rounded-full bg-white/8" />
+          <div className="grid grid-cols-3 gap-3">
+            {["Videos", "Comments", "Topics"].map((label) => (
+              <div
+                key={label}
+                className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-3"
+              >
+                <div className="animate-loading-shimmer h-7 w-14 rounded-xl bg-white/10" />
+                <p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-slate-300/45">
+                  {label}
+                </p>
               </div>
             ))}
           </div>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
-          {["Videos", "Comments", "Topics"].map((label) => (
-            <div
-              key={label}
-              className="rounded-[28px] border border-white/10 bg-white/5 p-5"
-            >
-              <div className="animate-loading-shimmer h-12 w-24 rounded-2xl bg-white/10" />
-              <p className="mt-3 text-sm uppercase tracking-[0.24em] text-slate-300/45">
-                {label} incoming
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
-        <div className="grid gap-5 lg:grid-cols-2">
-          <div className="space-y-3">
-            <div className="h-3 w-28 rounded-full bg-white/8" />
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div
-                  key={`content-filter-${index}`}
-                  className="h-10 w-20 rounded-full bg-white/8"
-                />
-              ))}
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="h-3 w-24 rounded-full bg-white/8" />
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  key={`platform-filter-${index}`}
-                  className="h-10 w-24 rounded-full bg-white/8"
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            key={`topic-skeleton-${index}`}
-            className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))] p-6"
-          >
-            <div className="flex gap-3">
-              <div className="h-8 w-20 rounded-full bg-white/8" />
-              <div className="h-8 w-24 rounded-full bg-white/8" />
-            </div>
-            <div className="mt-6 h-8 w-4/5 rounded-2xl bg-white/8" />
-            <div className="mt-4 h-4 w-28 rounded-full bg-white/8" />
-            <div className="mt-6 space-y-3 rounded-2xl border border-white/6 bg-black/10 p-4">
-              <div className="h-4 w-full rounded-full bg-white/8" />
-              <div className="h-4 w-5/6 rounded-full bg-white/8" />
-            </div>
-            <div className="mt-6 h-10 w-40 rounded-full bg-white/8" />
-          </div>
-        ))}
       </section>
     </section>
   );
@@ -250,6 +305,7 @@ export default function ResultsPage() {
           if (data.status === "pending" || data.status === "processing") {
             return (
               <ProcessingState
+                runId={params.id}
                 searchTag={data.search_tag}
                 startDate={data.start_date}
                 endDate={data.end_date}

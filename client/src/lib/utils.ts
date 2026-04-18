@@ -49,9 +49,53 @@ export function formatDateRange(start: string, end: string): string {
   return `${fmt.format(parseApiDate(start))} – ${fmt.format(parseApiDate(end))}`;
 }
 
+export function formatCompactDateRange(start: string, end: string): string {
+  const startDate = parseApiDate(start);
+  const endDate = parseApiDate(end);
+
+  const sameYear =
+    startDate.getUTCFullYear() === endDate.getUTCFullYear();
+  const sameMonth =
+    sameYear && startDate.getUTCMonth() === endDate.getUTCMonth();
+
+  if (sameMonth) {
+    return `${String(startDate.getUTCDate()).padStart(2, "0")} – ${new Intl.DateTimeFormat(
+      undefined,
+      { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" },
+    ).format(endDate)}`;
+  }
+
+  if (sameYear) {
+    return `${new Intl.DateTimeFormat(undefined, {
+      day: "2-digit",
+      month: "short",
+      timeZone: "UTC",
+    }).format(startDate)} – ${new Intl.DateTimeFormat(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(endDate)}`;
+  }
+
+  return formatDateRange(start, end);
+}
+
 export function formatRunDate(date: string): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parseApiDate(date));
+}
+
+export function formatRunDateCompact(date: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+  }).format(parseApiDate(date));
+}
+
+export function formatRunTime(date: string): string {
+  return new Intl.DateTimeFormat(undefined, {
     timeStyle: "short",
   }).format(parseApiDate(date));
 }

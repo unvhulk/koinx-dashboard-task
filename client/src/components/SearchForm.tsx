@@ -8,8 +8,8 @@ import type { AnalyzeRequest, VideoDuration, SortOrder } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const defaultDates = {
-  start_date: "2024-01-01",
-  end_date: "2024-03-31",
+  start_date: "2025-04-01",
+  end_date: "2025-07-31",
 };
 
 const VIEW_PRESETS = [
