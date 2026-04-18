@@ -1,11 +1,11 @@
 # KoinX Content Ideas Dashboard
 
-A dashboard that tells the KoinX content team what to write — blogs, videos, and social posts — based on real user comments scraped from YouTube and Reddit.
+A dashboard that tells the KoinX content team what to write — blogs, videos, and social posts — based on real user comments scraped from YouTube, TikTok, and Twitter/X.
 
 ## Features
 
-- **Multi-platform ingestion** — YouTube Data API v3 + Reddit (PRAW)
-- **Enhanced search** — auto-expands a single tag into 5 semantic variants via LLM, deduplicates across queries
+- **Multi-platform ingestion** — YouTube (Data API v3), TikTok and Twitter/X (via Apify); each platform isolated so one failure doesn't kill the run
+- **Enhanced search** — auto-expands a single tag into multiple semantic variants via LLM, deduplicates across queries; works across all platforms
 - **Quality filters** — min views, min subscribers, min comments, video duration, sort order, India region focus
 - **LLM topic extraction** — Groq (llama-3.1-8b-instant) clusters comments into topics with sentiment, content type (blog / video / social), frequency, and example quotes
 - **Blog outline generator** — one click per topic → structured outline with title, intro, sections, conclusion; refine with natural language instructions
@@ -16,31 +16,34 @@ A dashboard that tells the KoinX content team what to write — blogs, videos, a
 ## How it works
 
 ```
-Search tag + filters
+Search tag + platform selection + filters
         ↓
-YouTube Data API v3
-  → Search videos (native filters: duration, sort, region)
+Optional: Enhanced search
+  → LLM expands tag into multiple query variants (all platforms)
+        ↓
+YouTube Data API v3 (if selected)
+  → Search videos (native filters: duration, sort, region, India focus)
   → Filter by stats: min_views, min_subscribers, min_comments
   → Fetch top comments per video
         ↓
-Optional: Enhanced search
-  → LLM expands tag into 5 query variants
-  → Deduplicates videos across queries
+TikTok via Apify (if selected)
+  → Search videos by tag
+  → Extract captions as content
         ↓
-Optional: Reddit (PRAW)
-  → Search crypto subreddits
-  → Fetch post comments
+Twitter/X via Apify (if selected)
+  → Search tweets by tag
+  → Extract tweet text as content
         ↓
 Groq LLM (llama-3.1-8b-instant)
-  → Batch comments (50 at a time)
+  → Batch content (50 items at a time) per platform
   → Extract topic clusters: content type, sentiment, title suggestion, example quotes
-  → Merge + deduplicate topics across batches
+  → Merge + deduplicate topics across batches and platforms
         ↓
 MongoDB
   → Store run + insights + pipeline logs
         ↓
 Dashboard
-  → Frequency chart  →  Topic cards  →  Outline generator  →  Pipeline logs
+  → Frequency chart  →  Topic cards (filterable by platform)  →  Outline generator  →  Pipeline logs
 ```
 
 ## Tech Stack
@@ -51,7 +54,7 @@ Dashboard
 | Database | MongoDB (Motor async driver) |
 | LLM | Groq API — llama-3.1-8b-instant |
 | YouTube | YouTube Data API v3 |
-| Reddit | PRAW (Python Reddit API Wrapper) |
+| TikTok + Twitter/X | Apify actors |
 | Frontend | Next.js 14 + Tailwind CSS + Recharts |
 
 ---
@@ -65,7 +68,7 @@ Dashboard
 - MongoDB Atlas account (free M0 cluster works)
 - YouTube Data API v3 key
 - Groq API key
-- (Optional) Reddit app credentials
+- Apify API key (free tier — for TikTok and Twitter/X)
 
 ### 1. Get API Keys
 
@@ -80,8 +83,8 @@ Dashboard
 **MongoDB Atlas:**
 - [cloud.mongodb.com](https://cloud.mongodb.com) → Free M0 cluster → Connect → copy connection string
 
-**Reddit (optional):**
-- [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) → Create app (script type) → copy `client_id` and `secret`
+**Apify (TikTok + Twitter/X):**
+- [apify.com](https://apify.com) → Sign up → Settings → API & Integrations → copy Personal API token
 
 ### 2. Backend
 
@@ -92,7 +95,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# Fill in MONGODB_URI, YOUTUBE_API_KEY, GROQ_API_KEY (and optionally Reddit keys)
+# Fill in MONGODB_URI, YOUTUBE_API_KEY, GROQ_API_KEY, APIFY_API_KEY
 
 uvicorn main:app --reload --port 8000
 ```
@@ -117,10 +120,11 @@ source .venv/bin/activate
 pytest tests/ -v
 ```
 
-27 tests across three files, organised by feature class:
+33 tests across four files, organised by feature class:
 - `TestCommentQualityFilter`, `TestTopicMerge`, `TestLLMResponseParser` — LLM extraction logic
 - `TestQueryParser` — query expander
 - `TestOutlineParser` — outline generator
+- `TestApifyResponseParsing` — TikTok/Twitter response parsing (no API calls)
 
 ### Frontend (Vitest)
 
@@ -159,7 +163,9 @@ npm test
 
 **Pipeline observability:** Every run emits structured log events to a `pipeline_logs` MongoDB collection (TTL: 7 days). The `/logs/[run_id]` page polls these in real time so you can see exactly why a run returned 0 topics — quota hit, no matching videos, LLM parse error, etc.
 
-**Extensible platforms:** Adding a new source (Twitter, TikTok) requires only an adapter module that returns `list[str]` of comment texts. The LLM pipeline and storage layer are platform-agnostic.
+**Platform isolation:** Each platform (YouTube, TikTok, Twitter/X) runs in its own try/except block. If one fails — quota exhausted, actor blocked, timeout — the others still complete and results are saved normally. Failures appear as `warn` entries in the pipeline logs.
+
+**Apify actors used:** `clockworks/free-tiktok-scraper` for TikTok video captions, `gentle_cloud/twitter-tweets-scraper` for tweets.
 
 ---
 
@@ -175,6 +181,9 @@ Check the pipeline logs (`/logs/{run_id}`) — common causes:
 - Quality filters too strict (lower `min_views` / `min_comments`)
 - Date range too narrow (no videos published in that window)
 - Comments disabled on matching videos (403 from YouTube → silently skipped)
+
+**TikTok / Twitter returns 0 topics**
+Check pipeline logs for `apify.tiktok.error` or `apify.twitter.error` — likely Apify credit exhaustion. YouTube results in the same run are unaffected. Top up Apify credits at [apify.com/billing](https://apify.com/billing).
 
 **Run stuck at "processing"**
 Backend crashed mid-run. Restart the server and submit a new run — the stuck run will remain in the database as `processing` and can be ignored.
