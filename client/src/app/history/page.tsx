@@ -71,14 +71,15 @@ export default function HistoryPage() {
         <div>
           <table className="w-full table-fixed text-left">
             <colgroup>
-              <col className="w-[24%]" />
-              <col className="w-[16%]" />
-              <col className="w-[12%]" />
+              <col className="w-[22%]" />
+              <col className="w-[14%]" />
+              <col className="w-[10%]" />
               <col className="w-[7%]" />
-              <col className="w-[9%]" />
+              <col className="w-[8%]" />
               <col className="w-[7%]" />
-              <col className="w-[13%]" />
-              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
             </colgroup>
             <thead className="border-b border-white/10 bg-black/10 text-xs uppercase tracking-[0.24em] text-slate-300/55">
               <tr>
@@ -88,6 +89,7 @@ export default function HistoryPage() {
                 <th className="px-3 py-4 text-center">Videos</th>
                 <th className="px-3 py-4 text-center">Comments</th>
                 <th className="px-3 py-4 text-center">Topics</th>
+                <th className="px-4 py-4">Platforms</th>
                 <th className="px-4 py-4">Run</th>
                 <th className="px-4 py-4">Actions</th>
               </tr>
@@ -95,7 +97,7 @@ export default function HistoryPage() {
             <tbody className="divide-y divide-white/8 text-sm text-slate-200/82">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-14 text-center text-slate-300/70">
+                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
                     Loading history...
                   </td>
                 </tr>
@@ -103,7 +105,7 @@ export default function HistoryPage() {
 
               {!loading && error ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-14 text-center text-rose-100">
+                  <td colSpan={9} className="px-6 py-14 text-center text-rose-100">
                     {error}
                   </td>
                 </tr>
@@ -111,7 +113,7 @@ export default function HistoryPage() {
 
               {!loading && !error && !runs.length ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-14 text-center text-slate-300/70">
+                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
                     No runs yet. Start an analysis from the home page.
                   </td>
                 </tr>
@@ -135,6 +137,18 @@ export default function HistoryPage() {
                   <td className="px-3 py-4 text-center">{run.video_count}</td>
                   <td className="px-3 py-4 text-center">{run.comment_count}</td>
                   <td className="px-3 py-4 text-center">{run.insight_count ?? "-"}</td>
+                  <td className="px-4 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {(run.platforms ?? ["youtube"]).map((p) => (
+                        <span
+                          key={p}
+                          className="rounded-full border border-white/10 bg-white/6 px-2 py-0.5 text-[10px] capitalize text-slate-300/70"
+                        >
+                          {p === "twitter" ? "X" : p}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   <td className="px-4 py-4 text-slate-300/72">
                     <span className="block whitespace-nowrap">
                       {formatRunDateCompact(run.created_at)}

@@ -42,6 +42,7 @@ export interface AnalysisRun {
   search_tag: string;
   start_date: string;
   end_date: string;
+  platforms?: Platform[];
   status: RunStatus;
   video_count: number;
   comment_count: number;

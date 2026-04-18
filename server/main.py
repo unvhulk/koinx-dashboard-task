@@ -201,6 +201,7 @@ async def analyze(req: AnalyzeRequest, background_tasks: BackgroundTasks):
         "search_tag": req.search_tag,
         "start_date": datetime.combine(req.start_date, datetime.min.time()),
         "end_date": datetime.combine(req.end_date, datetime.min.time()),
+        "platforms": [p.value for p in req.platforms],
         "status": RunStatus.pending,
         "created_at": datetime.utcnow(),
         "video_count": 0,

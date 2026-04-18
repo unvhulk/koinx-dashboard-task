@@ -70,6 +70,7 @@ export function SearchForm() {
     india_focus: false,
   });
   const [error, setError] = useState<string | null>(null);
+  const ytSelected = form.platforms.includes("youtube");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -200,6 +201,9 @@ export function SearchForm() {
             TikTok and Twitter/X results are fetched via Apify.
           </p>
         </div>
+
+        {/* YouTube-only sections */}
+        {ytSelected && (<>
 
         {/* Enhanced search toggle */}
         <div className="flex items-start justify-between gap-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
@@ -424,6 +428,8 @@ export function SearchForm() {
             </button>
           </div>
         </div>
+
+        </>)}
 
         {error ? (
           <p className="rounded-2xl border border-rose-300/14 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">
