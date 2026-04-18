@@ -20,21 +20,21 @@ export function TopicCard({ insight }: { insight: Insight }) {
         </span>
       </div>
 
-      <div className=”mt-6 space-y-4”>
+      <div className="mt-6 space-y-4">
         <div>
-          <h3 className=”font-[family-name:var(--font-display)] text-xl leading-snug text-white”>
+          <h3 className="font-[family-name:var(--font-display)] text-xl leading-snug text-white">
             {insight.topic}
           </h3>
-          <p className=”mt-2 text-xs text-slate-400/60”>
+          <p className="mt-2 text-xs text-slate-400/60">
             Came up in {insight.frequency} comments
           </p>
         </div>
 
-        <div className=”rounded-2xl border border-white/8 bg-black/12 px-4 py-3”>
-          <p className=”mb-1 text-xs uppercase tracking-[0.18em] text-cyan-100/40”>
+        <div className="rounded-2xl border border-white/8 bg-black/12 px-4 py-3">
+          <p className="mb-1 text-xs uppercase tracking-[0.18em] text-cyan-100/40">
             Suggested title
           </p>
-          <p className=”text-sm leading-6 text-slate-200/85”>
+          <p className="text-sm leading-6 text-slate-200/85">
             {insight.suggested_title}
           </p>
         </div>
@@ -72,15 +72,16 @@ export function TopicCard({ insight }: { insight: Insight }) {
             </p>
             <ul className="space-y-1.5">
               {insight.sources.slice(0, 5).map((source) => (
-                <li key={source.url}>
+                <li key={source.url} className="min-w-0">
                   <a
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-xs text-cyan-200/70 transition hover:text-cyan-100"
+                    title={source.title}
+                    className="flex min-w-0 items-center gap-2 text-xs text-cyan-200/70 transition hover:text-cyan-100"
                   >
                     <span className="shrink-0 text-[10px]">↗</span>
-                    <span className="truncate">{source.title}</span>
+                    <span className="block min-w-0 truncate">{source.title}</span>
                   </a>
                 </li>
               ))}
