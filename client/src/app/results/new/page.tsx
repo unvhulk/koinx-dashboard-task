@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Suspense } from "react";
 
 import { startAnalysis } from "@/lib/api";
 import type { AnalyzeRequest, Platform, VideoDuration, SortOrder } from "@/lib/types";
 
-export default function NewResultPage() {
+function NewResultInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const started = useRef(false);
@@ -45,5 +45,17 @@ export default function NewResultPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function NewResultPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-cyan-300" />
+      </div>
+    }>
+      <NewResultInner />
+    </Suspense>
   );
 }
