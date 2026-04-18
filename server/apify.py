@@ -1,5 +1,5 @@
 import httpx
-from datetime import date
+from datetime import date, datetime
 from config import settings
 
 BASE = "https://api.apify.com/v2"
@@ -25,6 +25,17 @@ async def _run_actor(actor: str, payload: dict, timeout: int = 120) -> list[dict
         return [item for item in data if "noResults" not in item]
 
 
+def _in_range(dt: datetime, start: date, end: date) -> bool:
+    return start <= dt.date() <= end
+
+
+def _parse_twitter_date(raw: str) -> datetime | None:
+    try:
+        return datetime.strptime(raw, "%a %b %d %H:%M:%S +0000 %Y")
+    except (ValueError, TypeError):
+        return None
+
+
 async def fetch_tiktok_comments(
     tag: str,
     start: date,
@@ -35,6 +46,8 @@ async def fetch_tiktok_comments(
     Uses video captions (text field) as the analysable content.
     free-tiktok-scraper does not return comment threads — captions
     capture the creator angle which reflects what the audience searches for.
+    Results are filtered client-side by createTimeISO since the actor
+    does not reliably enforce dateFrom/dateTo server-side.
     """
     payload = {
         "searchQueries": [tag],
@@ -48,6 +61,14 @@ async def fetch_tiktok_comments(
     texts: list[str] = []
     seen: set[str] = set()
     for item in items:
+        raw_ts = item.get("createTimeISO") or ""
+        if raw_ts:
+            try:
+                item_date = datetime.fromisoformat(raw_ts.replace("Z", "+00:00")).date()
+                if not (start <= item_date <= end):
+                    continue
+            except (ValueError, TypeError):
+                pass
         text = (item.get("text") or "").strip()
         if text and text not in seen:
             seen.add(text)
@@ -63,6 +84,10 @@ async def fetch_twitter_comments(
     end: date,
     max_tweets: int = 200,
 ) -> list[str]:
+    """
+    Results filtered client-side by created_at since the actor does not
+    reliably enforce date ranges server-side.
+    """
     payload = {
         "searchQueries": [tag],
         "maxTweetsPerQuery": min(max_tweets, 200),
@@ -75,6 +100,11 @@ async def fetch_twitter_comments(
     tweets: list[str] = []
     seen: set[str] = set()
     for item in items:
+        raw_ts = item.get("created_at") or ""
+        if raw_ts:
+            dt = _parse_twitter_date(raw_ts)
+            if dt and not _in_range(dt, start, end):
+                continue
         text = (item.get("full_text") or item.get("text") or "").strip()
         if text and text not in seen:
             seen.add(text)

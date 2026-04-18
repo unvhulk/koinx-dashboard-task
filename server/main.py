@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import database
 import youtube
-import reddit as reddit_module
 import apify as apify_module
 import llm
 import query_expander
@@ -126,19 +125,6 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
                     all_insights.extend(i.model_dump() for i in insights)
             except Exception as e:
                 await log("youtube.error", str(e), level="warn")
-
-        if Platform.reddit in req.platforms:
-            loop = asyncio.get_event_loop()
-            rd_comments = await loop.run_in_executor(
-                None,
-                reddit_module.fetch_comments,
-                req.search_tag, req.start_date, req.end_date, 200
-            )
-            total_comments += len(rd_comments)
-
-            if rd_comments:
-                insights = await llm.extract_insights(req.search_tag, rd_comments, Platform.reddit)
-                all_insights.extend(i.model_dump() for i in insights)
 
         if Platform.tiktok in req.platforms:
             try:
