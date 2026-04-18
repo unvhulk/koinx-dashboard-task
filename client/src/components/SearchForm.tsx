@@ -202,10 +202,7 @@ export function SearchForm() {
           </p>
         </div>
 
-        {/* YouTube-only sections */}
-        {ytSelected && (<>
-
-        {/* Enhanced search toggle */}
+        {/* Enhanced search toggle — applies to all platforms */}
         <div className="flex items-start justify-between gap-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
           <div>
             <p className="text-sm font-medium text-white">Enhanced search</p>
@@ -235,6 +232,9 @@ export function SearchForm() {
             />
           </button>
         </div>
+
+        {/* YouTube-only sections */}
+        {ytSelected && (<>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
