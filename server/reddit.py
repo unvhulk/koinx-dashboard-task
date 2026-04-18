@@ -18,6 +18,8 @@ def fetch_comments(tag: str, start: date, end: date, max_comments: int = 200) ->
     if not settings.reddit_client_id:
         return []
 
+    # TODO: date objects have no .strftime("%s") — this always falls back to 0/9999999999,
+    # making date filtering a no-op. Fix: use datetime.combine(start, time.min).timestamp()
     start_ts = int(date.fromisoformat(str(start)).strftime("%s") if hasattr(date, "strftime") else 0)
     end_ts = int(date.fromisoformat(str(end)).strftime("%s") if hasattr(date, "strftime") else 9999999999)
 

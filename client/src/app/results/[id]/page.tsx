@@ -318,6 +318,12 @@ export default function ResultsPage() {
                       <span className="rounded-full border border-cyan-300/18 bg-cyan-300/12 px-3.5 py-1.5 text-cyan-100">
                         {data.status}
                       </span>
+                      <a
+                        href={`/logs/${data.id}`}
+                        className="rounded-full border border-white/10 bg-white/6 px-3.5 py-1.5 text-slate-300/70 transition hover:text-white"
+                      >
+                        View pipeline logs →
+                      </a>
                     </div>
                   </div>
 

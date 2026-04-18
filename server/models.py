@@ -58,6 +58,20 @@ class AnalysisRun(BaseModel):
     error: Optional[str] = None
 
 
+class VideoDuration(str, Enum):
+    any = "any"
+    short = "short"      # < 4 min (Shorts / quick takes)
+    medium = "medium"    # 4–20 min
+    long = "long"        # > 20 min (deep dives)
+
+
+class SortOrder(str, Enum):
+    relevance = "relevance"
+    viewCount = "viewCount"
+    date = "date"
+    rating = "rating"
+
+
 class AnalyzeRequest(BaseModel):
     search_tag: str
     start_date: date
@@ -65,8 +79,14 @@ class AnalyzeRequest(BaseModel):
     platforms: list[Platform] = [Platform.youtube]
     max_videos: int = Field(default=20, ge=1, le=50)
     enhanced_search: bool = False
+    # Stats-based filters (require extra API calls)
     min_views: int = Field(default=0, ge=0)
     min_subscribers: int = Field(default=0, ge=0)
+    min_comments: int = Field(default=0, ge=0)
+    # Native search.list filters (no extra API cost)
+    video_duration: VideoDuration = VideoDuration.any
+    sort_order: SortOrder = SortOrder.relevance
+    india_focus: bool = False  # adds regionCode=IN + relevanceLanguage=en
 
 
 class AnalyzeResponse(BaseModel):

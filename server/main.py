@@ -13,8 +13,9 @@ import reddit as reddit_module
 import llm
 import query_expander
 import outline_generator
+import logger as pipeline_logger
 from models import (
-    AnalyzeRequest, AnalyzeResponse, AnalysisRun, RunStatus, Platform, Source,
+    AnalyzeRequest, AnalyzeResponse, RunStatus, Platform, Source, VideoDuration, SortOrder,
     OutlineRequest, OutlineResponse, OutlineSection,
     SaveOutlineRequest, SavedOutline, RefineOutlineRequest,
 )
@@ -44,37 +45,58 @@ app.add_middleware(
 
 async def _run_pipeline(run_id: str, req: AnalyzeRequest):
     db = database.get_db()
+    t0 = datetime.utcnow()
+
+    async def log(stage: str, message: str, level: str = "info", **meta):
+        await pipeline_logger.log(run_id, stage, message, level, **meta)
+
     try:
         await db.analysis_runs.update_one(
             {"_id": ObjectId(run_id)},
             {"$set": {"status": RunStatus.processing}}
         )
+        await log("pipeline.start", f"Starting analysis for '{req.search_tag}'",
+                  search_tag=req.search_tag, max_videos=req.max_videos,
+                  enhanced_search=req.enhanced_search,
+                  min_views=req.min_views, min_subscribers=req.min_subscribers,
+                  min_comments=req.min_comments, video_duration=req.video_duration.value,
+                  sort_order=req.sort_order.value, india_focus=req.india_focus)
 
         all_insights = []
         total_videos = 0
         total_comments = 0
 
         if Platform.youtube in req.platforms:
-            # Enhanced search: expand tag into multiple queries
             if req.enhanced_search:
                 queries = await query_expander.expand_query(req.search_tag)
+                await log("query.expand", f"{len(queries)} search variants generated", queries=queries)
             else:
                 queries = [req.search_tag]
 
-            # Fetch videos for each query, deduplicate by video_id
             seen_video_ids: set[str] = set()
             videos: list[dict] = []
-            for query in queries:
+            for i, query in enumerate(queries, 1):
                 results = await youtube.search_videos(
                     query, req.start_date, req.end_date, req.max_videos,
                     min_views=req.min_views, min_subscribers=req.min_subscribers,
+                    min_comments=req.min_comments,
+                    video_duration=req.video_duration.value,
+                    sort_order=req.sort_order.value,
+                    india_focus=req.india_focus,
                 )
+                added = 0
                 for v in results:
                     if v["video_id"] not in seen_video_ids:
                         seen_video_ids.add(v["video_id"])
                         videos.append(v)
+                        added += 1
+                await log("search.video",
+                          f"Query {i}/{len(queries)}: {added} videos kept after quality filter",
+                          query=query, found=len(results), kept=added)
 
             total_videos += len(videos)
+            await log("filter.quality", f"{total_videos} unique videos queued for comment fetch",
+                      video_count=total_videos)
 
             comment_tasks = [youtube.fetch_comments(v["video_id"]) for v in videos]
             results = await asyncio.gather(*comment_tasks, return_exceptions=True)
@@ -84,13 +106,21 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
                 if isinstance(r, list):
                     yt_comments.extend(r)
             total_comments += len(yt_comments)
+            await log("comments.fetch", f"{total_comments} raw comments collected across {total_videos} videos",
+                      raw_comment_count=total_comments, video_count=total_videos)
 
             if yt_comments:
                 yt_sources = [
                     Source(url=f"https://youtube.com/watch?v={v['video_id']}", title=v["title"])
                     for v in videos
                 ]
+                await log("llm.start", f"Sending {len(yt_comments)} comments to LLM for topic extraction",
+                          comment_count=len(yt_comments))
+                llm_t0 = datetime.utcnow()
                 insights = await llm.extract_insights(req.search_tag, yt_comments, Platform.youtube, yt_sources)
+                duration_ms = int((datetime.utcnow() - llm_t0).total_seconds() * 1000)
+                await log("llm.done", f"{len(insights)} topics extracted",
+                          topic_count=len(insights), duration_ms=duration_ms)
                 all_insights.extend(i.model_dump() for i in insights)
 
         if Platform.reddit in req.platforms:
@@ -106,11 +136,15 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
                 insights = await llm.extract_insights(req.search_tag, rd_comments, Platform.reddit)
                 all_insights.extend(i.model_dump() for i in insights)
 
-        # Serialize any datetime fields nested in insights
         for ins in all_insights:
             for k, v in ins.items():
                 if hasattr(v, 'isoformat'):
                     ins[k] = v.isoformat()
+
+        total_ms = int((datetime.utcnow() - t0).total_seconds() * 1000)
+        await log("pipeline.done",
+                  f"Complete — {total_videos} videos, {total_comments} comments, {len(all_insights)} topics in {total_ms / 1000:.1f}s",
+                  total_duration_ms=total_ms, topic_count=len(all_insights))
 
         await db.analysis_runs.update_one(
             {"_id": ObjectId(run_id)},
@@ -123,6 +157,9 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
             }}
         )
     except Exception as e:
+        total_ms = int((datetime.utcnow() - t0).total_seconds() * 1000)
+        await pipeline_logger.log(run_id, "pipeline.error", str(e), level="error",
+                                  total_duration_ms=total_ms)
         await db.analysis_runs.update_one(
             {"_id": ObjectId(run_id)},
             {"$set": {"status": RunStatus.failed, "error": str(e)}}
@@ -262,6 +299,18 @@ async def get_history(limit: int = 20):
                 doc[k] = doc[k].isoformat()
         runs.append(doc)
     return runs
+
+
+@app.get("/api/logs/{run_id}")
+async def get_logs(run_id: str):
+    db = database.get_db()
+    cursor = db.pipeline_logs.find({"run_id": run_id}, {"_id": 0}).sort("ts", 1)
+    items = []
+    async for doc in cursor:
+        if "ts" in doc and hasattr(doc["ts"], "isoformat"):
+            doc["ts"] = doc["ts"].isoformat()
+        items.append(doc)
+    return items
 
 
 @app.get("/health")

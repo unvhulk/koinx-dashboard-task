@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { startAnalysis } from "@/lib/api";
-import type { AnalyzeRequest } from "@/lib/types";
+import type { AnalyzeRequest, VideoDuration, SortOrder } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const defaultDates = {
@@ -28,6 +28,27 @@ const SUB_PRESETS = [
   { label: "1M+", value: 1_000_000 },
 ];
 
+const COMMENT_PRESETS = [
+  { label: "Any", value: 0 },
+  { label: "10+", value: 10 },
+  { label: "50+", value: 50 },
+  { label: "200+", value: 200 },
+];
+
+const DURATION_OPTIONS: { label: string; value: VideoDuration; hint: string }[] = [
+  { label: "Any", value: "any", hint: "" },
+  { label: "Short", value: "short", hint: "< 4 min" },
+  { label: "Medium", value: "medium", hint: "4–20 min" },
+  { label: "Long", value: "long", hint: "> 20 min" },
+];
+
+const SORT_OPTIONS: { label: string; value: SortOrder }[] = [
+  { label: "Relevance", value: "relevance" },
+  { label: "Most viewed", value: "viewCount" },
+  { label: "Newest", value: "date" },
+  { label: "Top rated", value: "rating" },
+];
+
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${n / 1_000_000}M`;
   if (n >= 1_000) return `${n / 1_000}K`;
@@ -44,6 +65,10 @@ export function SearchForm() {
     enhanced_search: false,
     min_views: 0,
     min_subscribers: 0,
+    min_comments: 0,
+    video_duration: "any",
+    sort_order: "relevance",
+    india_focus: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -265,9 +290,115 @@ export function SearchForm() {
             </div>
           </div>
 
+          {/* Min comment count */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-400/70">Min comments on video</span>
+              <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs text-white">
+                {form.min_comments === 0 ? "Any" : `${form.min_comments}+`}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {COMMENT_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setForm((c) => ({ ...c, min_comments: preset.value }))}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs transition",
+                    form.min_comments === preset.value
+                      ? "border-cyan-300/40 bg-cyan-300/18 text-cyan-100"
+                      : "border-white/10 bg-white/6 text-slate-300/70 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <p className="text-xs text-slate-400/60">
             Filters out low-quality sources. Strict filters may reduce video count.
           </p>
+        </div>
+
+        {/* Search settings — native YT params, no extra quota cost */}
+        <div className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 space-y-4">
+          <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
+            Search settings
+          </p>
+
+          <div className="space-y-2">
+            <span className="text-xs text-slate-400/70">Sort results by</span>
+            <div className="flex flex-wrap gap-2">
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setForm((c) => ({ ...c, sort_order: opt.value }))}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs transition",
+                    form.sort_order === opt.value
+                      ? "border-cyan-300/40 bg-cyan-300/18 text-cyan-100"
+                      : "border-white/10 bg-white/6 text-slate-300/70 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs text-slate-400/70">Video duration</span>
+            <div className="flex flex-wrap gap-2">
+              {DURATION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setForm((c) => ({ ...c, video_duration: opt.value }))}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs transition",
+                    form.video_duration === opt.value
+                      ? "border-cyan-300/40 bg-cyan-300/18 text-cyan-100"
+                      : "border-white/10 bg-white/6 text-slate-300/70 hover:bg-white/10 hover:text-white",
+                  )}
+                  title={opt.hint}
+                >
+                  {opt.label}{opt.hint ? ` · ${opt.hint}` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* India focus toggle */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium text-white">India focus</p>
+              <p className="mt-0.5 text-xs text-slate-400/65">
+                Biases results toward India-published content
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.india_focus}
+              onClick={() => setForm((c) => ({ ...c, india_focus: !c.india_focus }))}
+              className={cn(
+                "h-6 w-11 shrink-0 rounded-full border transition-colors duration-200",
+                form.india_focus
+                  ? "border-cyan-300/40 bg-cyan-300/25"
+                  : "border-white/15 bg-white/8",
+              )}
+            >
+              <span
+                className={cn(
+                  "block h-4 w-4 rounded-full transition-transform duration-200",
+                  form.india_focus ? "translate-x-6 bg-cyan-300" : "translate-x-1 bg-slate-400",
+                )}
+              />
+            </button>
+          </div>
         </div>
 
         {error ? (

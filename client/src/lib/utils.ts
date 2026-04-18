@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 
 import type { ContentType, Sentiment } from "@/lib/types";
 
@@ -44,12 +44,16 @@ export function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
-export function formatDateRange(start: string, end: string) {
-  return `${format(parseApiDate(start), "dd MMM yyyy")} - ${format(parseApiDate(end), "dd MMM yyyy")}`;
+export function formatDateRange(start: string, end: string): string {
+  const fmt = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+  return `${fmt.format(parseApiDate(start))} – ${fmt.format(parseApiDate(end))}`;
 }
 
-export function formatRunDate(date: string) {
-  return format(parseApiDate(date), "dd MMM yyyy, hh:mm a");
+export function formatRunDate(date: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parseApiDate(date));
 }
 
 export function toSlug(text: string): string {

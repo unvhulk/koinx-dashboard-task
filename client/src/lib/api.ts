@@ -1,4 +1,4 @@
-import type { AnalysisRun, AnalyzeRequest, BlogOutline, SavedOutline } from "@/lib/types";
+import type { AnalysisRun, AnalyzeRequest, BlogOutline, PipelineLog, SavedOutline } from "@/lib/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -72,6 +72,10 @@ export async function saveOutline(body: {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+export async function getLogs(runId: string): Promise<PipelineLog[]> {
+  return request(`/api/logs/${runId}`);
 }
 
 export async function getSavedOutlines(

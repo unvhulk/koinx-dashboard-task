@@ -76,12 +76,13 @@ export default function HistoryPage() {
                 <th className="px-6 py-4">Topics</th>
                 <th className="px-6 py-4">Date Run</th>
                 <th className="px-6 py-4">View</th>
+                <th className="px-6 py-4">Logs</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/8 text-sm text-slate-200/82">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-14 text-center text-slate-300/70">
+                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
                     Loading history...
                   </td>
                 </tr>
@@ -89,7 +90,7 @@ export default function HistoryPage() {
 
               {!loading && error ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-14 text-center text-rose-100">
+                  <td colSpan={9} className="px-6 py-14 text-center text-rose-100">
                     {error}
                   </td>
                 </tr>
@@ -97,7 +98,7 @@ export default function HistoryPage() {
 
               {!loading && !error && !runs.length ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-14 text-center text-slate-300/70">
+                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
                     No runs yet. Start an analysis from the home page.
                   </td>
                 </tr>
@@ -118,7 +119,7 @@ export default function HistoryPage() {
                   </td>
                   <td className="px-6 py-5">{run.video_count}</td>
                   <td className="px-6 py-5">{run.comment_count}</td>
-                  <td className="px-6 py-5">{run.insights?.length ?? "-"}</td>
+                  <td className="px-6 py-5">{run.insight_count ?? "-"}</td>
                   <td className="px-6 py-5 text-slate-300/72">
                     <span className="block whitespace-nowrap">{formatRunDate(run.created_at)}</span>
                   </td>
@@ -128,6 +129,14 @@ export default function HistoryPage() {
                       className="inline-flex rounded-full border border-cyan-300/24 bg-cyan-300/12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300/18 hover:text-white"
                     >
                       View
+                    </Link>
+                  </td>
+                  <td className="px-6 py-5">
+                    <Link
+                      href={`/logs/${run.id}`}
+                      className="inline-flex rounded-full border border-white/10 bg-white/6 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/70 transition hover:bg-white/10 hover:text-white"
+                    >
+                      Logs
                     </Link>
                   </td>
                 </tr>

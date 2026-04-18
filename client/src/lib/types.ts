@@ -3,6 +3,9 @@ export type RunStatus = "pending" | "processing" | "complete" | "failed";
 export type ContentType = "blog" | "video" | "social";
 export type Sentiment = "confused" | "concerned" | "curious" | "positive";
 
+export type VideoDuration = "any" | "short" | "medium" | "long";
+export type SortOrder = "relevance" | "viewCount" | "date" | "rating";
+
 export interface AnalyzeRequest {
   search_tag: string;
   start_date: string;
@@ -12,6 +15,10 @@ export interface AnalyzeRequest {
   enhanced_search: boolean;
   min_views: number;
   min_subscribers: number;
+  min_comments: number;
+  video_duration: VideoDuration;
+  sort_order: SortOrder;
+  india_focus: boolean;
 }
 
 export interface Source {
@@ -54,6 +61,15 @@ export interface BlogOutline {
   sections: OutlineSection[];
   conclusion: string;
   estimated_words: number;
+}
+
+export interface PipelineLog {
+  run_id: string;
+  ts: string;
+  stage: string;
+  level: "info" | "warn" | "error";
+  message: string;
+  [key: string]: unknown;
 }
 
 export interface SavedOutline {
