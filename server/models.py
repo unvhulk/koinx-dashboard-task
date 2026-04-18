@@ -20,6 +20,8 @@ class Sentiment(str, Enum):
 class Platform(str, Enum):
     youtube = "youtube"
     reddit = "reddit"
+    tiktok = "tiktok"
+    twitter = "twitter"
 
 
 class RunStatus(str, Enum):

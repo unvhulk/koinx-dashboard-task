@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import database
 import youtube
 import reddit as reddit_module
+import apify as apify_module
 import llm
 import query_expander
 import outline_generator
@@ -134,6 +135,30 @@ async def _run_pipeline(run_id: str, req: AnalyzeRequest):
 
             if rd_comments:
                 insights = await llm.extract_insights(req.search_tag, rd_comments, Platform.reddit)
+                all_insights.extend(i.model_dump() for i in insights)
+
+        if Platform.tiktok in req.platforms:
+            await log("apify.tiktok.start", f"Fetching TikTok comments for '{req.search_tag}'")
+            tt_comments = await apify_module.fetch_tiktok_comments(
+                req.search_tag, req.start_date, req.end_date, max_comments=200
+            )
+            total_comments += len(tt_comments)
+            await log("apify.tiktok.done", f"{len(tt_comments)} TikTok comments collected",
+                      comment_count=len(tt_comments))
+            if tt_comments:
+                insights = await llm.extract_insights(req.search_tag, tt_comments, Platform.tiktok)
+                all_insights.extend(i.model_dump() for i in insights)
+
+        if Platform.twitter in req.platforms:
+            await log("apify.twitter.start", f"Fetching Twitter/X posts for '{req.search_tag}'")
+            tw_comments = await apify_module.fetch_twitter_comments(
+                req.search_tag, req.start_date, req.end_date, max_tweets=200
+            )
+            total_comments += len(tw_comments)
+            await log("apify.twitter.done", f"{len(tw_comments)} tweets collected",
+                      comment_count=len(tw_comments))
+            if tw_comments:
+                insights = await llm.extract_insights(req.search_tag, tw_comments, Platform.twitter)
                 all_insights.extend(i.model_dump() for i in insights)
 
         for ins in all_insights:

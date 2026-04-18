@@ -1,4 +1,4 @@
-export type Platform = "youtube" | "reddit";
+export type Platform = "youtube" | "reddit" | "tiktok" | "twitter";
 export type RunStatus = "pending" | "processing" | "complete" | "failed";
 export type ContentType = "blog" | "video" | "social";
 export type Sentiment = "confused" | "concerned" | "curious" | "positive";

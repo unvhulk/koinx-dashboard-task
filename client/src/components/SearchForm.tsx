@@ -92,7 +92,6 @@ export function SearchForm() {
       const response = await startAnalysis({
         ...form,
         search_tag: form.search_tag.trim(),
-        platforms: ["youtube"],
       });
       router.push(`/results/${response.run_id}`);
     } catch (submitError) {
@@ -165,15 +164,43 @@ export function SearchForm() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
+        <div className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 space-y-3">
           <p className="text-xs font-medium uppercase tracking-[0.26em] text-cyan-100/50">
-            Platform
+            Platforms
           </p>
-          <div className="mt-2 inline-flex rounded-full border border-cyan-300/24 bg-cyan-300/12 px-4 py-2 text-sm font-medium text-white">
-            YouTube
+          <div className="flex flex-wrap gap-2">
+            {([
+              { value: "youtube", label: "YouTube" },
+              { value: "tiktok", label: "TikTok" },
+              { value: "twitter", label: "Twitter / X" },
+            ] as const).map((p) => {
+              const active = form.platforms.includes(p.value);
+              return (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() =>
+                    setForm((c) => ({
+                      ...c,
+                      platforms: active
+                        ? c.platforms.filter((x) => x !== p.value)
+                        : [...c.platforms, p.value],
+                    }))
+                  }
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 text-sm font-medium transition",
+                    active
+                      ? "border-cyan-300/40 bg-cyan-300/18 text-cyan-100"
+                      : "border-white/10 bg-white/6 text-slate-300/70 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
-          <p className="mt-2 px-1 text-xs text-slate-400/60">
-            YouTube-only analysis is enabled for now.
+          <p className="px-1 text-xs text-slate-400/60">
+            TikTok and Twitter/X results are fetched via Apify.
           </p>
         </div>
 
