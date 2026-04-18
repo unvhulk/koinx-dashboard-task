@@ -9,7 +9,7 @@ import { FilterBar } from "@/components/FilterBar";
 import { FrequencyChart } from "@/components/FrequencyChart";
 import { StatusPoller } from "@/components/StatusPoller";
 import { TopicCard } from "@/components/TopicCard";
-import type { ContentType, PipelineLog } from "@/lib/types";
+import type { ContentType, Platform, PipelineLog } from "@/lib/types";
 import { formatDateRange, formatRunDate } from "@/lib/utils";
 
 const TERMINAL_LOG_STAGES = new Set(["pipeline.done", "pipeline.error"]);
@@ -254,6 +254,7 @@ function ProcessingState({
 export default function ResultsPage() {
   const params = useParams<{ id: string }>();
   const [contentType, setContentType] = useState<ContentType | "all">("all");
+  const [activePlatform, setActivePlatform] = useState<Platform | "all">("all");
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-14">
@@ -340,10 +341,12 @@ export default function ResultsPage() {
           }
 
           const insights = data.insights ?? [];
-          const hasActiveFilters = contentType !== "all";
+          const presentPlatforms = [...new Set(insights.map((i) => i.platform))] as Platform[];
+          const hasActiveFilters = contentType !== "all" || activePlatform !== "all";
           const filteredInsights = insights.filter(
             (insight) =>
-              contentType === "all" || insight.content_type === contentType,
+              (contentType === "all" || insight.content_type === contentType) &&
+              (activePlatform === "all" || insight.platform === activePlatform),
           );
           const hasNoResults =
             data.video_count === 0 &&
@@ -434,6 +437,9 @@ export default function ResultsPage() {
               <FilterBar
                 contentType={contentType}
                 onContentTypeChange={setContentType}
+                platforms={presentPlatforms}
+                activePlatform={activePlatform}
+                onPlatformChange={setActivePlatform}
               />
 
               <div className="flex flex-wrap items-end justify-between gap-3 rounded-[28px] border border-white/10 bg-white/4 px-5 py-4">

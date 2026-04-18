@@ -1,11 +1,14 @@
 "use client";
 
-import type { ContentType } from "@/lib/types";
+import type { ContentType, Platform } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface FilterBarProps {
   contentType: ContentType | "all";
   onContentTypeChange: (value: ContentType | "all") => void;
+  platforms: Platform[];
+  activePlatform: Platform | "all";
+  onPlatformChange: (value: Platform | "all") => void;
 }
 
 const contentTypeOptions: Array<{ label: string; value: ContentType | "all" }> = [
@@ -14,6 +17,13 @@ const contentTypeOptions: Array<{ label: string; value: ContentType | "all" }> =
   { label: "Video", value: "video" },
   { label: "Social", value: "social" },
 ];
+
+const PLATFORM_LABELS: Record<string, string> = {
+  youtube: "YouTube",
+  tiktok: "TikTok",
+  twitter: "Twitter / X",
+  reddit: "Reddit",
+};
 
 function FilterGroup<T extends string>({
   label,
@@ -34,7 +44,6 @@ function FilterGroup<T extends string>({
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const active = option.value === value;
-
           return (
             <button
               key={option.value}
@@ -59,25 +68,32 @@ function FilterGroup<T extends string>({
 export function FilterBar({
   contentType,
   onContentTypeChange,
+  platforms,
+  activePlatform,
+  onPlatformChange,
 }: FilterBarProps) {
+  const platformOptions: Array<{ label: string; value: Platform | "all" }> = [
+    { label: "All", value: "all" },
+    ...platforms.map((p) => ({ label: PLATFORM_LABELS[p] ?? p, value: p })),
+  ];
+
   return (
     <div className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-5 shadow-[0_20px_64px_rgba(2,8,23,0.24)] backdrop-blur-xl sm:p-6">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <div className="flex flex-wrap gap-6">
         <FilterGroup
           label="Content Type"
           value={contentType}
           options={contentTypeOptions}
           onChange={onContentTypeChange}
         />
-        <div className="space-y-3 lg:justify-self-end">
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-300/50">
-            Platform
-          </p>
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/24 bg-cyan-300/10 px-4 py-2 text-sm text-white">
-            <span className="h-2 w-2 rounded-full bg-cyan-200" />
-            YouTube only
-          </div>
-        </div>
+        {platforms.length > 1 && (
+          <FilterGroup
+            label="Platform"
+            value={activePlatform}
+            options={platformOptions}
+            onChange={onPlatformChange}
+          />
+        )}
       </div>
     </div>
   );

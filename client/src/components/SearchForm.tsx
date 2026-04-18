@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { startAnalysis } from "@/lib/api";
 import type { AnalyzeRequest, VideoDuration, SortOrder } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -71,9 +70,8 @@ export function SearchForm() {
     india_focus: false,
   });
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!form.search_tag.trim()) {
@@ -86,23 +84,22 @@ export function SearchForm() {
       return;
     }
 
-    try {
-      setSubmitting(true);
-      setError(null);
-      const response = await startAnalysis({
-        ...form,
-        search_tag: form.search_tag.trim(),
-      });
-      router.push(`/results/${response.run_id}`);
-    } catch (submitError) {
-      const message =
-        submitError instanceof Error
-          ? submitError.message
-          : "Something went wrong. Please try again.";
-      setError(message);
-    } finally {
-      setSubmitting(false);
-    }
+    const params = new URLSearchParams({
+      tag: form.search_tag.trim(),
+      start: form.start_date,
+      end: form.end_date,
+      platforms: form.platforms.join(","),
+      max_videos: String(form.max_videos),
+      enhanced_search: String(form.enhanced_search),
+      min_views: String(form.min_views),
+      min_subscribers: String(form.min_subscribers),
+      min_comments: String(form.min_comments),
+      video_duration: form.video_duration,
+      sort_order: form.sort_order,
+      india_focus: String(form.india_focus),
+    });
+
+    router.push(`/results/new?${params.toString()}`);
   }
 
   return (
@@ -440,10 +437,9 @@ export function SearchForm() {
           </p>
           <button
             type="submit"
-            disabled={submitting}
-            className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#7ef4ff,#5be4c6)] px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex min-w-[180px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#7ef4ff,#5be4c6)] px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:brightness-105"
           >
-            {submitting ? "Finding ideas..." : "Find content ideas"}
+            Find content ideas
           </button>
         </div>
       </div>
