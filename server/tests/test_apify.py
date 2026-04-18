@@ -1,3 +1,38 @@
+from datetime import date
+from apify import _in_range, _parse_twitter_date
+
+
+class TestDateFiltering:
+    """Date range enforcement applied client-side after actor response."""
+
+    def test_in_range_inclusive(self):
+        assert _in_range(__import__('datetime').datetime(2024, 6, 15), date(2024, 1, 1), date(2024, 12, 31)) is True
+
+    def test_in_range_start_boundary(self):
+        assert _in_range(__import__('datetime').datetime(2024, 1, 1), date(2024, 1, 1), date(2024, 12, 31)) is True
+
+    def test_in_range_end_boundary(self):
+        assert _in_range(__import__('datetime').datetime(2024, 12, 31), date(2024, 1, 1), date(2024, 12, 31)) is True
+
+    def test_in_range_before_start(self):
+        assert _in_range(__import__('datetime').datetime(2023, 12, 31), date(2024, 1, 1), date(2024, 12, 31)) is False
+
+    def test_in_range_after_end(self):
+        assert _in_range(__import__('datetime').datetime(2025, 1, 1), date(2024, 1, 1), date(2024, 12, 31)) is False
+
+    def test_parse_twitter_date_valid(self):
+        dt = _parse_twitter_date("Sat Apr 18 17:12:30 +0000 2024")
+        assert dt is not None
+        assert dt.year == 2024
+        assert dt.month == 4
+        assert dt.day == 18
+
+    def test_parse_twitter_date_invalid(self):
+        assert _parse_twitter_date("not a date") is None
+        assert _parse_twitter_date("") is None
+        assert _parse_twitter_date(None) is None
+
+
 class TestApifyResponseParsing:
     """Pure parsing logic — no API calls, no Apify credits used."""
 
