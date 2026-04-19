@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { getHistory } from "@/lib/api";
 import type { AnalysisRun } from "@/lib/types";
@@ -10,6 +10,45 @@ import {
   formatRunDateCompact,
   formatRunTime,
 } from "@/lib/utils";
+
+function Platforms({ platforms }: { platforms?: AnalysisRun["platforms"] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {(platforms ?? ["youtube"]).map((platform) => (
+        <span
+          key={platform}
+          className="rounded-full border border-white/10 bg-white/6 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-slate-300/70"
+        >
+          {platform === "twitter" ? "X" : platform}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: AnalysisRun["status"] }) {
+  return (
+    <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-slate-100">
+      {status}
+    </span>
+  );
+}
+
+function EmptyRow({
+  children,
+  colSpan,
+}: {
+  children: ReactNode;
+  colSpan: number;
+}) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-6 py-14 text-center text-slate-300/70">
+        {children}
+      </td>
+    </tr>
+  );
+}
 
 export default function HistoryPage() {
   const [runs, setRuns] = useState<AnalysisRun[]>([]);
@@ -68,7 +107,97 @@ export default function HistoryPage() {
       </section>
 
       <section className="mt-8 overflow-hidden rounded-[32px] border border-white/10 bg-white/5 shadow-[0_24px_80px_rgba(2,8,23,0.28)] backdrop-blur-xl">
-        <div>
+        <div className="grid gap-4 p-4 sm:p-5 lg:hidden">
+          {loading ? (
+            <div className="rounded-[24px] border border-white/10 bg-white/4 px-5 py-12 text-center text-sm text-slate-300/70">
+              Loading history...
+            </div>
+          ) : null}
+
+          {!loading && error ? (
+            <div className="rounded-[24px] border border-rose-300/14 bg-rose-300/10 px-5 py-12 text-center text-sm text-rose-100">
+              {error}
+            </div>
+          ) : null}
+
+          {!loading && !error && !runs.length ? (
+            <div className="rounded-[24px] border border-white/10 bg-white/4 px-5 py-12 text-center text-sm text-slate-300/70">
+              No runs yet. Start an analysis from the home page.
+            </div>
+          ) : null}
+
+          {!loading && !error
+            ? runs.map((run) => (
+                <article
+                  key={run.id}
+                  className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[0_16px_50px_rgba(2,8,23,0.18)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-lg font-medium text-white">
+                        {run.search_tag}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-300/72">
+                        {formatCompactDateRange(run.start_date, run.end_date)}
+                      </p>
+                    </div>
+                    <StatusBadge status={run.status} />
+                  </div>
+
+                  <div className="mt-4">
+                    <Platforms platforms={run.platforms} />
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-3 gap-3">
+                    {[
+                      [String(run.video_count), "Videos"],
+                      [String(run.comment_count), "Comments"],
+                      [String(run.insight_count ?? "-"), "Topics"],
+                    ].map(([value, label]) => (
+                      <div
+                        key={label}
+                        className="rounded-[20px] border border-white/10 bg-white/4 px-3 py-3 text-center"
+                      >
+                        <p className="text-lg font-semibold text-white">{value}</p>
+                        <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400/60">
+                          {label}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 rounded-[20px] border border-white/8 bg-black/10 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400/55">
+                      Run created
+                    </p>
+                    <p className="mt-2 text-sm text-slate-200/82">
+                      {formatRunDateCompact(run.created_at)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400/60">
+                      {formatRunTime(run.created_at)}
+                    </p>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <Link
+                      href={`/results/${run.id}`}
+                      className="inline-flex rounded-full border border-cyan-300/24 bg-cyan-300/12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 transition hover:bg-cyan-300/18 hover:text-white"
+                    >
+                      View
+                    </Link>
+                    <Link
+                      href={`/logs/${run.id}`}
+                      className="inline-flex rounded-full border border-white/10 bg-white/6 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300/70 transition hover:bg-white/10 hover:text-white"
+                    >
+                      Logs
+                    </Link>
+                  </div>
+                </article>
+              ))
+            : null}
+        </div>
+
+        <div className="hidden lg:block">
           <table className="w-full table-fixed text-left">
             <colgroup>
               <col className="w-[22%]" />
@@ -96,11 +225,7 @@ export default function HistoryPage() {
             </thead>
             <tbody className="divide-y divide-white/8 text-sm text-slate-200/82">
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
-                    Loading history...
-                  </td>
-                </tr>
+                <EmptyRow colSpan={9}>Loading history...</EmptyRow>
               ) : null}
 
               {!loading && error ? (
@@ -112,11 +237,9 @@ export default function HistoryPage() {
               ) : null}
 
               {!loading && !error && !runs.length ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-14 text-center text-slate-300/70">
-                    No runs yet. Start an analysis from the home page.
-                  </td>
-                </tr>
+                <EmptyRow colSpan={9}>
+                  No runs yet. Start an analysis from the home page.
+                </EmptyRow>
               ) : null}
 
               {runs.map((run) => (
@@ -130,24 +253,13 @@ export default function HistoryPage() {
                     </span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-slate-100">
-                      {run.status}
-                    </span>
+                    <StatusBadge status={run.status} />
                   </td>
                   <td className="px-3 py-4 text-center">{run.video_count}</td>
                   <td className="px-3 py-4 text-center">{run.comment_count}</td>
                   <td className="px-3 py-4 text-center">{run.insight_count ?? "-"}</td>
                   <td className="px-4 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {(run.platforms ?? ["youtube"]).map((p) => (
-                        <span
-                          key={p}
-                          className="rounded-full border border-white/10 bg-white/6 px-2 py-0.5 text-[10px] capitalize text-slate-300/70"
-                        >
-                          {p === "twitter" ? "X" : p}
-                        </span>
-                      ))}
-                    </div>
+                    <Platforms platforms={run.platforms} />
                   </td>
                   <td className="px-4 py-4 text-slate-300/72">
                     <span className="block whitespace-nowrap">

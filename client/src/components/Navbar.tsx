@@ -14,7 +14,7 @@ export function Navbar() {
             <p className="font-[family-name:var(--font-display)] text-xl leading-none text-white">
               KoinX
             </p>
-            <p className="mt-1 text-xs uppercase tracking-[0.28em] text-cyan-100/55 transition group-hover:text-cyan-100/80">
+            <p className="mt-1 hidden text-xs uppercase tracking-[0.28em] text-cyan-100/55 transition group-hover:text-cyan-100/80 sm:block">
               Content Ideas Dashboard
             </p>
           </div>

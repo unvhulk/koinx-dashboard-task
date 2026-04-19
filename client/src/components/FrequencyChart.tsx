@@ -19,7 +19,7 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
   social: "Social",
 };
 
-function clampLabel(value: string, maxLength = 42) {
+function clampLabel(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
 }
 
@@ -45,8 +45,8 @@ function normalizeLabel(value: unknown) {
   return "";
 }
 
-function splitLabel(value: string, lineLength = 22) {
-  const words = clampLabel(value, 44).split(" ");
+function splitLabel(value: string, lineLength: number) {
+  const words = value.split(" ");
   const lines: string[] = [];
   let current = "";
 
@@ -78,39 +78,31 @@ function splitLabel(value: string, lineLength = 22) {
   return lines;
 }
 
-function TopicTick({
-  x = 0,
-  y = 0,
-  payload,
-}: {
-  x?: number;
-  y?: number;
-  payload?: { value: unknown };
-}) {
-  if (!payload) {
-    return null;
-  }
-
-  const label = normalizeLabel(payload.value);
-  const lines = splitLabel(label);
-
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0}
-        y={0}
-        textAnchor="end"
-        fill="rgba(226,232,240,0.78)"
-        fontSize={12}
-      >
-        {lines.map((line) => (
-          <tspan key={line} x={0} dy={line === lines[0] ? -2 : 16}>
-            {line}
-          </tspan>
-        ))}
-      </text>
-    </g>
-  );
+function makeTopicTick(clampLen: number, lineLen: number) {
+  return function TopicTick({
+    x = 0,
+    y = 0,
+    payload,
+  }: {
+    x?: number;
+    y?: number;
+    payload?: { value: unknown };
+  }) {
+    if (!payload) return null;
+    const label = normalizeLabel(payload.value);
+    const lines = splitLabel(clampLabel(label, clampLen), lineLen);
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text x={0} y={0} textAnchor="end" fill="rgba(226,232,240,0.78)" fontSize={12}>
+          {lines.map((line) => (
+            <tspan key={line} x={0} dy={line === lines[0] ? -2 : 16}>
+              {line}
+            </tspan>
+          ))}
+        </text>
+      </g>
+    );
+  };
 }
 
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: Insight }> }) {
@@ -123,6 +115,61 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
       </p>
       <p className="mt-1.5 text-sm font-medium leading-5 text-white">{insight.topic}</p>
       <p className="mt-2 text-xs italic leading-5 text-slate-300/70">"{insight.suggested_title}"</p>
+    </div>
+  );
+}
+
+function ChartBody({
+  data,
+  chartHeight,
+  yAxisWidth,
+  leftMargin,
+  clampLen,
+  lineLen,
+}: {
+  data: Insight[];
+  chartHeight: number;
+  yAxisWidth: number;
+  leftMargin: number;
+  clampLen: number;
+  lineLen: number;
+}) {
+  const Tick = makeTopicTick(clampLen, lineLen);
+  return (
+    <div style={{ height: chartHeight }} className="w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 6, right: 16, left: leftMargin, bottom: 6 }}
+          barCategoryGap={16}
+        >
+          <XAxis
+            type="number"
+            tick={{ fill: "rgba(226,232,240,0.45)", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            type="category"
+            dataKey="topic"
+            width={yAxisWidth}
+            tick={<Tick />}
+            axisLine={false}
+            tickLine={false}
+            interval={0}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+          <Bar dataKey="frequency" radius={[0, 10, 10, 0]} maxBarSize={32}>
+            {data.map((entry) => (
+              <Cell
+                key={`${entry.topic}-${entry.platform}`}
+                fill={contentTypeSolid[entry.content_type]}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -158,40 +205,28 @@ export function FrequencyChart({ insights }: { insights: Insight[] }) {
         </div>
       </div>
 
-      <div style={{ height: chartHeight }} className="w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={sortedInsights}
-            layout="vertical"
-            margin={{ top: 6, right: 20, left: 44, bottom: 6 }}
-            barCategoryGap={16}
-          >
-            <XAxis
-              type="number"
-              tick={{ fill: "rgba(226,232,240,0.45)", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              type="category"
-              dataKey="topic"
-              width={220}
-              tick={<TopicTick />}
-              axisLine={false}
-              tickLine={false}
-              interval={0}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-            <Bar dataKey="frequency" radius={[0, 10, 10, 0]} maxBarSize={32}>
-              {sortedInsights.map((entry) => (
-                <Cell
-                  key={`${entry.topic}-${entry.platform}`}
-                  fill={contentTypeSolid[entry.content_type]}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      {/* Mobile chart — hidden on sm+ */}
+      <div className="block sm:hidden">
+        <ChartBody
+          data={sortedInsights}
+          chartHeight={chartHeight}
+          yAxisWidth={120}
+          leftMargin={8}
+          clampLen={16}
+          lineLen={12}
+        />
+      </div>
+
+      {/* Desktop chart — hidden on mobile */}
+      <div className="hidden sm:block">
+        <ChartBody
+          data={sortedInsights}
+          chartHeight={chartHeight}
+          yAxisWidth={220}
+          leftMargin={44}
+          clampLen={42}
+          lineLen={22}
+        />
       </div>
     </div>
   );
