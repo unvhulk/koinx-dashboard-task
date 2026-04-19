@@ -130,7 +130,7 @@ export default function HistoryPage() {
             ? runs.map((run) => (
                 <article
                   key={run.id}
-                  className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[0_16px_50px_rgba(2,8,23,0.18)]"
+                  className="min-w-0 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[0_16px_50px_rgba(2,8,23,0.18)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
